@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Central Gas — Blueprint Implementación Agente IA</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
+  :root {
+    --bg:#080c14;--card:#0d1420;--border:#1a2236;
+    --cyan:#22d3ee;--orange:#f97316;--violet:#a78bfa;
+    --emerald:#34d399;--rose:#fb7185;--amber:#fbbf24;
+    --sky:#38bdf8;--lime:#a3e635;--indigo:#818cf8;
+    --text:#e2e8f0;--muted:#94a3b8;--dim:#64748b;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;padding:20px 18px;min-height:100vh}
+  .wrap{max-width:1100px;margin:0 auto}
+  h1{font-size:20px;font-weight:800} h1 .g{color:var(--emerald)} h1 .m{color:var(--muted)}
+  .sub{color:var(--dim);font-size:10px;font-family:'JetBrains Mono',monospace;margin-top:3px}
+  .tabs{display:flex;gap:3px;margin:18px 0;background:var(--card);padding:3px;border-radius:10px;border:1px solid var(--border)}
+  .tab{flex:1;padding:9px 4px;border:none;border-radius:8px;cursor:pointer;background:transparent;color:var(--muted);font-size:10px;font-weight:500;font-family:'JetBrains Mono',monospace;transition:all .2s}
+  .tab.on{background:rgba(52,211,153,.13);color:var(--emerald);font-weight:700}
+  .tab:hover:not(.on){color:var(--text)}
+  .panel{display:none}.panel.on{display:block}
+  .badge{display:inline-block;border-radius:6px;padding:2px 10px;font-size:10px;font-weight:600;font-family:'JetBrains Mono',monospace}
+  .st{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;font-family:'JetBrains Mono',monospace;margin:0 0 10px 0}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .mono{font-family:'JetBrains Mono',monospace}
+  code{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--amber)}
+  .proto-box{margin-top:8px;padding:8px 10px;background:var(--bg);border-radius:6px;border:1px solid var(--border)}
+  .proto-label{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
+  .field-row{display:grid;grid-template-columns:120px 70px 1fr;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);font-size:10px;align-items:center}
+  .field-row:last-child{border-bottom:none}
+  .field-hdr{font-weight:700;color:var(--dim);font-size:9px;text-transform:uppercase}
+  .pipe-card{border-radius:10px;padding:16px;position:relative;overflow:hidden}
+  .pipe-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%}
+  .phase-card{border-radius:12px;padding:16px;border:1px solid var(--border);position:relative}
+  .phase-num{position:absolute;top:-10px;left:16px;font-size:11px;font-weight:800;font-family:'JetBrains Mono',monospace;padding:2px 10px;border-radius:6px}
+  .dep-tag{display:inline-block;background:var(--rose)15;color:var(--rose);border:1px solid var(--rose)33;border-radius:4px;padding:1px 7px;font-size:9px;margin:2px 2px}
+  .del-tag{display:inline-block;background:var(--emerald)15;color:var(--emerald);border:1px solid var(--emerald)33;border-radius:4px;padding:1px 7px;font-size:9px;margin:2px 2px}
+  .nav-side{width:200px;flex-shrink:0;display:flex;flex-direction:column;gap:4px}
+  .nav-item{border-radius:8px;padding:8px 10px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .15s;border:1px solid var(--border)}
+  .nav-item:hover{background:rgba(255,255,255,.03)}
+  .nav-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span class="g">CENTRAL GAS</span><span class="m"> — Blueprint Implementación Agente IA</span></h1>
+  <p class="sub">Documento técnico · Integraciones · Módulos · Modelo de Datos · Pipelines · Fases · Stack & Despliegue</p>
+
+  <div class="tabs">
+    <button class="tab on" onclick="showTab(0)">Integraciones</button>
+    <button class="tab" onclick="showTab(1)">Módulos</button>
+    <button class="tab" onclick="showTab(2)">Modelo Datos</button>
+    <button class="tab" onclick="showTab(3)">Pipelines</button>
+    <button class="tab" onclick="showTab(4)">Fases</button>
+    <button class="tab" onclick="showTab(5)">Stack</button>
+  </div>
+
+  <div class="panel on" id="p0"></div>
+  <div class="panel" id="p1"></div>
+  <div class="panel" id="p2"></div>
+  <div class="panel" id="p3"></div>
+  <div class="panel" id="p4"></div>
+  <div class="panel" id="p5"></div>
+</div>
+
+<script>
+// ═══════════════ DATA ═══════════════
+
+const INTEG=[
+  {name:"GasUp",icon:"⛽",color:"var(--cyan)",sub:"POS + HeadOffice — La fuente de ventas",
+   methods:[
+     {m:"API REST",status:"Pendiente confirmar",detail:"Endpoint probable: /api/v1/transactions, /api/v1/daily-close. Auth: API Key ó OAuth2. Rate limit desconocido."},
+     {m:"CSV Export",status:"Confirmado — funciona hoy",detail:"Export manual desde HeadOffice. 17 columnas. Encoding UTF-8 con BOM. Separador coma. Fechas dd/mm/yyyy."},
+     {m:"Webhook",status:"Por investigar",detail:"Si HeadOffice soporta webhooks → push en tiempo real. Elimina necesidad de polling."}
+   ],
+   fields:[
+     {n:"Fecha",type:"datetime",note:"Formato cambió en 2023: dd/mm/yyyy → yyyy-mm-dd"},
+     {n:"Placa",type:"string(10)",note:"Formato AGS: A#####A. Validar regex."},
+     {n:"Litros",type:"float",note:"2 decimales. Conversión a kg: ×0.68 (densidad GNC)"},
+     {n:"PVP",type:"float",note:"Precio por litro vigente al momento de despacho"},
+     {n:"Total",type:"float",note:"Litros × PVP. Verificar redondeo vs cálculo"},
+     {n:"Medio_pago",type:"enum",note:"EFECTIVO | CRÉDITO | PREPAGO | TARJETA"},
+     {n:"Segmento",type:"string",note:"TAXI | COMBI | VAGONETA | PARTICULAR"},
+     {n:"ID_EDS",type:"int",note:"1=Nacozari, 2=J.M.Chávez, 3=... mapear a nuestras 3"},
+     {n:"Manguera",type:"int",note:"1 ó 2 por dispensario. Para cruzar con E+H"},
+     {n:"ID_Cliente",type:"int",note:"FK a catálogo clientes GasUp. Mapear a Odoo partner"},
+   ],
+   issues:["Cambio de esquema 2023: columnas reordenadas + 4 columnas eliminadas","Encoding: archivos pre-2023 tienen Latin-1, post-2023 UTF-8","Campo 'Desc_medio_pago' a veces truncado a 20 chars","Timezone: HeadOffice reporta en UTC-6 (CST) sin DST"],
+   action:"Solicitar a Sebastián (GasUp): documentación API completa, credenciales sandbox, catálogo de endpoints"
+  },
+  {name:"SCADA PLC",icon:"🔧",color:"var(--orange)",sub:"Siemens S7-1200 — Tu testigo independiente",
+   methods:[
+     {m:"snap7 (Python)",status:"Recomendado",detail:"Librería Python para protocolo S7. Lee DB blocks directamente. Puerto 102. Probado con S7-1200."},
+     {m:"pymodbus TCP",status:"Alternativa",detail:"Si PLC tiene módulo Modbus TCP. Puerto 502. Más estándar, menos datos que S7 nativo."},
+     {m:"OPC UA",status:"Futuro",detail:"Si se instala server OPC UA en PLC. Puerto 4840. Estándar industrial, más overhead."}
+   ],
+   fields:[
+     {n:"P_succion",type:"REAL (4B)",note:"Presión succión. Offset DB1.DBD0. Rango 0-20 bar"},
+     {n:"P_descarga",type:"REAL (4B)",note:"Presión descarga. DB1.DBD4. Rango 0-300 bar. Alarma >260"},
+     {n:"T_etapa1",type:"REAL (4B)",note:"Temp 1ra etapa. DB1.DBD8. Alarma >120°C"},
+     {n:"T_etapa2",type:"REAL (4B)",note:"Temp 2da etapa. DB1.DBD12. Alarma >120°C"},
+     {n:"T_aceite",type:"REAL (4B)",note:"Temp aceite compresor. DB1.DBD16. Alarma >85°C"},
+     {n:"Totalizador",type:"DINT (4B)",note:"Nm³ acumulados. DB1.DBD20. Nunca resetear."},
+     {n:"Estado",type:"WORD (2B)",note:"Bit 0=Marcha, 1=Paro, 2=Falla, 3=Emergencia"},
+     {n:"Alarmas",type:"WORD (2B)",note:"Bit 0=Alta P, 1=Alta T, 2=Fuga, 3=E-stop, 4=Bajo aceite"},
+     {n:"Horas_op",type:"DINT (4B)",note:"Horas operación acumuladas. Para programar mantto."},
+     {n:"I_motor",type:"REAL (4B)",note:"Corriente motor. Para detección de desgaste."},
+   ],
+   chain:"PLC S7-1200 → Ethernet RJ45 (1m) → Teltonika RUT956 LAN → 4G/Starlink WAN → VPN WireGuard → Servidor → snap7 client → MQTT publish → PostgreSQL",
+   issues:["PLC Tag List: PEDIR A SEBASTIÁN (SAFE/STAR). Sin esto, no hay offsets.","Frecuencia lectura: 30s normal, 5s durante alarma activa","Reconexión automática: snap7 pierde conexión si Teltonika cambia de 4G a Starlink","Buffer local: Teltonika puede cachear datos si se pierde WAN (ModbusTCP gateway mode)"],
+   action:"Solicitar a Sebastián: PLC Tag List completa con offsets, tipos de dato, y rangos de cada variable"
+  },
+  {name:"Odoo 17",icon:"📊",color:"var(--violet)",sub:"ERP Contable — Tu sistema de registro",
+   methods:[
+     {m:"XML-RPC",status:"Estándar Odoo",detail:"Endpoint: /xmlrpc/2/common (auth) + /xmlrpc/2/object (CRUD). Python xmlrpc.client nativo."},
+     {m:"JSON-RPC",status:"Alternativa moderna",detail:"Endpoint: /jsonrpc. Mismo resultado, formato JSON. Mejor para debugging."},
+     {m:"OdooRPC (librería)",status:"Conveniente",detail:"Wrapper Python sobre XML-RPC. Manejo de sesiones, cache de modelos, API más limpia."}
+   ],
+   fields:[
+     {n:"account.move",type:"model",note:"Asientos contables. Tipo: 'entry' (póliza) ó 'out_invoice' (factura)"},
+     {n:"account.move.line",type:"model",note:"Líneas del asiento: débito, crédito, cuenta, partner, analítica"},
+     {n:"account.payment",type:"model",note:"Pagos recibidos. Enlaza con factura. Conciliación automática."},
+     {n:"res.partner",type:"model",note:"Clientes/flotilleros. RFC, razón social, crédito, contacto WhatsApp"},
+     {n:"stock.move",type:"model",note:"Movimientos inventario: Nm³ entrada (Naturgy) → Compresión → Despacho"},
+     {n:"product.product",type:"model",note:"GNC como producto. UoM: Nm³ y Litros. Costo promedio."},
+     {n:"account.journal",type:"model",note:"Diarios: Ventas GNC, Banco, Caja, Ajustes inventario"},
+     {n:"l10n_mx.edi",type:"model",note:"CFDI 4.0: timbrado, cancelación, complementos Carta Porte"},
+   ],
+   issues:["CFDI 4.0 requiere PAC activo (Solución Factible, Finkok, etc.)","Complemento Carta Porte para transporte MAT requiere campos adicionales","Cuenta contable GNC: definir plan de cuentas específico antes de implementar","Multi-company: si las 3 EDS son la misma razón social, no se necesita"],
+   action:"Configurar Odoo 17 Community: plan de cuentas SAT, PAC para timbrado, catálogo de productos GNC, diarios contables"
+  },
+  {name:"Banco",icon:"🏦",color:"var(--indigo)",sub:"Conciliación bancaria automática",
+   methods:[
+     {m:"API Open Banking",status:"Depende del banco",detail:"BBVA/Banorte tienen APIs. Requiere contrato empresarial. Movimientos en tiempo real."},
+     {m:"Archivo BAI2/OFX",status:"Universal",detail:"Descarga manual o SFTP desde banca electrónica. Formato estándar. Parseo con ofxparse."},
+     {m:"Scraping (último recurso)",status:"Frágil",detail:"Playwright/Selenium para bancos sin API. Requiere mantenimiento constante."}
+   ],
+   fields:[
+     {n:"Fecha_valor",type:"date",note:"Fecha efectiva del movimiento. Puede diferir de fecha operación."},
+     {n:"Monto",type:"float",note:"Positivo=depósito, Negativo=cargo. 2 decimales MXN."},
+     {n:"Referencia",type:"string",note:"Referencia numérica. Clave para match con factura."},
+     {n:"Concepto",type:"string",note:"Descripción libre. Parsear para identificar pagador."},
+     {n:"Tipo",type:"enum",note:"SPEI | TRANSFERENCIA | DEPÓSITO_EFECTIVO | CARGO_DOMICILIADO"},
+   ],
+   issues:["Depósitos en efectivo no traen referencia — match solo por monto ± fecha","SPEI tarda hasta 30 segundos — polling cada 5 min suficiente","Algunos flotilleros pagan desde cuentas de terceros (esposa, contador)","Match tolerance: ±$5 MXN para redondeos, ±1 día para fecha valor"],
+   action:"Abrir cuenta empresarial con API (BBVA recomendado). O configurar SFTP para descarga automática de estados de cuenta"
+  },
+  {name:"WhatsApp",icon:"💬",color:"var(--lime)",sub:"Canal de comunicación con admin + flotilleros",
+   methods:[
+     {m:"Meta Cloud API",status:"Recomendado",detail:"API oficial de WhatsApp Business. Templates pre-aprobados. Webhook para incoming. $0.05/msg."},
+     {m:"Twilio",status:"Alternativa",detail:"Wrapper sobre Meta API. Mejor SDK para Python. $0.005-0.05/msg dependiendo del tipo."},
+     {m:"WhatsApp Web.js",status:"No oficial",detail:"Puppeteer controlando WhatsApp Web. Gratis pero puede ser bloqueado. Solo para desarrollo."}
+   ],
+   fields:[
+     {n:"msg_cierre_diario",type:"template",note:"Variables: {fecha}, {ventas_total}, {litros}, {anomalias}, {margen}"},
+     {n:"msg_factura",type:"template",note:"Variables: {cliente}, {folio_cfdi}, {monto}. Adjunto: PDF+XML"},
+     {n:"msg_alerta_scada",type:"template",note:"Variables: {estacion}, {variable}, {valor}, {umbral}, {accion}"},
+     {n:"msg_saldo",type:"reply",note:"Respuesta a consulta. Variables: {cliente}, {saldo}, {ultimas_cargas}"},
+     {n:"msg_rotacion_mat",type:"template",note:"Variables: {mat_id}, {origen}, {destino}, {hora_salida}"},
+   ],
+   issues:["Templates deben ser pre-aprobados por Meta (24-48h review)","Ventana de 24h: después de última interacción, solo templates permitidos","Número de WhatsApp Business requiere verificación de empresa","Rate limit: 1,000 msg/día en tier inicial, escala con historial"],
+   action:"Registrar WhatsApp Business API. Crear y aprobar templates para los 5 tipos de mensaje. Configurar webhook para incoming."
+  }
+];
+
+const MODULES=[
+  {name:"Parser GasUp",color:"var(--cyan)",icon:"📥",
+   inputs:["CSV file ó JSON response de API GasUp","Esquema de columnas (versión 2023 ó pre-2023)"],
+   outputs:["Lista de Transaction normalizadas (20 campos)","Lista de anomalías detectadas","Hash SHA256 del archivo para deduplicación"],
+   logic:["Detecta versión esquema por headers ó conteo columnas","Normaliza fechas a ISO 8601 UTC","Valida placa con regex AGS: ^A\\d{5}A$","Calcula campos derivados: kg (litros×0.68), ingreso_neto","Deduplica por hash: si archivo ya procesado, skip","Marca anomalías: monto negativo, placa desconocida, litros >200 (tanque máx)"],
+   deps:["pandas (parsing CSV)","hashlib (deduplicación)","pydantic (validación schema)"],
+   errors:["FileNotFoundError → retry 3x con backoff","SchemaError → alerta admin + archiva en /errors/","DuplicateFile → log + skip silencioso"]},
+  {name:"Motor Reconciliación",color:"var(--amber)",icon:"⚖️",
+   inputs:["Transacciones GasUp (Fuente A)","Lecturas E+H Coriolis (Fuente B)","Totalizador SCADA (Fuente C)","Asientos Odoo (Fuente D)"],
+   outputs:["ReconciliationResult: status (OK/WARNING/CRITICAL)","Lista de discrepancias con source, expected, actual, delta","Recomendación de acción por tipo de discrepancia"],
+   logic:["Check 1: A ≈ B (±2%) — ventas vs masa despachada","Check 2: A < B → fraude operador alert","Check 3: A > B → transacción fantasma alert","Check 4: ΣB ≈ C−ΔStock (±5%) — despachado vs comprimido","Check 5: ΣB < C → ok si presión bancos subió, else fuga","Check 6: A = D (0%) — toda venta tiene asiento","Check 7: Σ pagos Odoo = Σ depósitos banco (±$5 MXN)","Severidad: INFO < WARNING < CRITICAL < EMERGENCY"],
+   deps:["numpy (cálculos de tolerancia)","PostgreSQL (histórico para comparación)","Config YAML (tolerancias por check)"],
+   errors:["SourceUnavailable → reconciliación parcial (marca qué falta)","ToleranceExceeded → escalamiento automático según severidad","DataMismatch → genera ticket de investigación"]},
+  {name:"Odoo Client",color:"var(--violet)",icon:"📝",
+   inputs:["Transaction normalizada (del Parser)","ReconciliationResult (del Motor)","Datos de pago bancario (matching)"],
+   outputs:["ID del asiento creado en Odoo","Folio CFDI timbrado","Estado actualizado de CxC por cliente"],
+   logic:["Crea account.move con líneas: Débito (Caja/Banco) + Crédito (Ingreso GNC)","Si medio_pago=CRÉDITO → actualiza res.partner.credit_used","Si medio_pago=PREPAGO → decrementa saldo prepago","Genera CFDI 4.0 → envía a PAC → recibe UUID timbre","Actualiza stock.move: decrementa inventario GNC despachado","Si reconciliación OK → póliza de cierre diario automática"],
+   deps:["xmlrpc.client (conexión Odoo)","json (payloads)","retry (reconexión)"],
+   errors:["OdooConnectionError → retry 3x → alerta admin","CFDITimbreError → guarda borrador, reintenta en 15 min","DuplicateEntry → busca existente por referencia, skip"]},
+  {name:"MQTT Handler",color:"var(--orange)",icon:"📡",
+   inputs:["Mensajes MQTT topic: scada/{station_id}/{variable}","Payload: JSON {value, timestamp, quality}"],
+   outputs:["Escritura en PostgreSQL tabla scada_readings","Trigger a Alert Engine si umbral excedido","Buffer in-memory para consultas rápidas (últimos 5 min)"],
+   logic:["Subscribe a topics: scada/parques/#, scada/oriente/#, scada/pension/#","Parsea payload JSON, valida schema","Escribe batch cada 10 segundos (no 1 por 1 — performance)","Mantiene ring buffer in-memory: últimas 300 lecturas por variable","Publica en topic interno: alerts/{station_id} si umbral","Heartbeat check: si no llega msg en 90s → conexión_perdida alert"],
+   deps:["paho-mqtt (client MQTT)","psycopg2 (PostgreSQL bulk insert)","collections.deque (ring buffer)"],
+   errors:["BrokerDisconnect → auto-reconnect con backoff exponencial","MalformedPayload → log + skip (no crashear por 1 msg malo)","DBWriteError → buffer en memoria hasta reconexión DB"]},
+  {name:"Alert Engine",color:"var(--rose)",icon:"🚨",
+   inputs:["Eventos del MQTT Handler (umbral excedido)","Resultados de Reconciliación (discrepancias)","Heartbeat checks (conexión perdida)"],
+   outputs:["Mensaje WhatsApp al destinatario según severidad","Registro en tabla alerts de PostgreSQL","Orden de mantenimiento en Odoo (si recurrente)"],
+   logic:["Severidad: INFO (log only) → WARNING (WhatsApp admin) → CRITICAL (WhatsApp admin+operador) → EMERGENCY (WhatsApp todos + protocolo PIPC)","Cooldown: no repetir misma alerta en 15 min (evitar spam)","Escalamiento: si WARNING persiste 30 min → sube a CRITICAL","Agrupación: si 3+ alertas en 5 min → mensaje consolidado","Recurrencia: si misma alerta >3 veces/semana → crea orden mantto Odoo","De-duplicación: misma variable+estación+severidad = 1 sola alerta"],
+   deps:["apscheduler (cooldown timers)","Template WhatsApp por severidad","Configuración YAML de umbrales"],
+   errors:["WhatsAppSendFail → retry 2x → fallback SMS → log","AllChannelsFail → escribir en PostgreSQL para revisión manual"]},
+  {name:"Report Generator",color:"var(--sky)",icon:"📄",
+   inputs:["Datos agregados de PostgreSQL (diario/mensual/anual)","Templates DOCX (SASISOPA, CRE, SEMARNAT)","Configuración de periodicidad por reporte"],
+   outputs:["Archivo DOCX con formato corporativo","Alerta WhatsApp a Josue para revisión","Archivo archivado en repositorio con versionado"],
+   logic:["DIARIO: Bitácora SASISOPA Elem. 7 + 14 → auto-fill con datos del día","MENSUAL: Inventario Nm³, eficiencia compresión, mermas, ventas por segmento","TRIMESTRAL: Indicadores ASEA, emisiones fugitivas estimadas (factor emisión × Nm³)","ANUAL: Informe CRE (volumen distribuido, clientes, estaciones) + COA SEMARNAT","Template engine: python-docx con marcadores {{variable}} en templates","Validación: verifica que todos los campos requeridos tengan dato"],
+   deps:["python-docx (generación DOCX)","pandas (agregación datos)","schedule (cron triggers)"],
+   errors:["TemplateMissing → alerta admin + skip generación","DataIncomplete → genera reporte parcial marcado como BORRADOR"]},
+  {name:"WhatsApp Bot",color:"var(--lime)",icon:"🤖",
+   inputs:["Mensaje incoming del flotillero vía webhook","Contexto: historial de conversación (últimos 5 msgs)","Datos de Odoo + GasUp para respuesta"],
+   outputs:["Respuesta al flotillero (saldo, facturas, estado)","Acciones en Odoo (generar CFDI, enviar estado de cuenta)","Log de conversación en PostgreSQL"],
+   logic:["Intent detection: SALDO | FACTURA | ESTADO_CUENTA | CARGA_HOY | OTRO","Si SALDO → consulta Odoo CxC por placa/cliente → responde monto","Si FACTURA → genera CFDI en Odoo → timbra → envía PDF+XML","Si ESTADO_CUENTA → genera PDF resumen → envía","Si CARGA_HOY → consulta GasUp últimas transacciones del día","Si OTRO → respuesta genérica + escalamiento a Josue si necesario","Identificación cliente: por número WhatsApp → mapeo en tabla clientes"],
+   deps:["Meta Cloud API / Twilio (WhatsApp)","anthropic SDK (NLP para intents si complejo)","python-docx / reportlab (PDF estado cuenta)"],
+   errors:["UnknownClient → pedir placa o nombre → buscar en catálogo","IntentUnclear → preguntar: '¿Necesitas saldo, factura, o algo más?'","OdooDown → responder: 'Sistema en mantenimiento, intentar en 15 min'"]}
+];
+
+const TABLES=[
+  {name:"transactions",color:"var(--cyan)",desc:"Transacciones normalizadas del parser GasUp",
+   cols:[
+     {n:"id",t:"BIGSERIAL",note:"PK autoincrement"},
+     {n:"source_hash",t:"VARCHAR(64)",note:"SHA256 del archivo origen. Índice UNIQUE para dedup."},
+     {n:"station_id",t:"INT",note:"FK → stations. 1=Parques, 2=Oriente, 3=Pensión"},
+     {n:"timestamp_utc",t:"TIMESTAMPTZ",note:"Fecha/hora UTC de la transacción"},
+     {n:"placa",t:"VARCHAR(10)",note:"Placa del vehículo. Índice para búsquedas rápidas."},
+     {n:"litros",t:"DECIMAL(10,2)",note:"Litros despachados según GasUp"},
+     {n:"kg",t:"DECIMAL(10,3)",note:"Kg calculados: litros × 0.68"},
+     {n:"pvp",t:"DECIMAL(8,2)",note:"Precio por litro al momento de despacho"},
+     {n:"total_mxn",t:"DECIMAL(12,2)",note:"Total cobrado en MXN"},
+     {n:"medio_pago",t:"VARCHAR(20)",note:"EFECTIVO | CRÉDITO | PREPAGO | TARJETA"},
+     {n:"segmento",t:"VARCHAR(20)",note:"TAXI | COMBI | VAGONETA | PARTICULAR"},
+     {n:"cliente_id",t:"INT",note:"FK → clientes (mapeo GasUp → Odoo partner)"},
+     {n:"manguera",t:"SMALLINT",note:"1 ó 2. Para cruzar con E+H Coriolis."},
+     {n:"odoo_move_id",t:"INT",note:"FK → asiento Odoo creado. NULL si pendiente."},
+     {n:"reconciled",t:"BOOLEAN",note:"true si pasó reconciliación sin discrepancia"},
+     {n:"anomalies",t:"JSONB",note:"Array de anomalías detectadas por el parser"},
+     {n:"created_at",t:"TIMESTAMPTZ",note:"Timestamp de inserción en nuestro sistema"},
+   ]},
+  {name:"scada_readings",color:"var(--orange)",desc:"Telemetría SCADA — una fila cada 30 segundos por variable",
+   cols:[
+     {n:"id",t:"BIGSERIAL",note:"PK. Volumen alto: ~2,880 filas/día/variable"},
+     {n:"station_id",t:"INT",note:"FK → stations"},
+     {n:"variable",t:"VARCHAR(30)",note:"P_succion, P_descarga, T_etapa1, etc."},
+     {n:"value",t:"DECIMAL(12,4)",note:"Valor numérico de la lectura"},
+     {n:"quality",t:"SMALLINT",note:"0=OK, 1=suspect, 2=bad. Del PLC."},
+     {n:"timestamp_utc",t:"TIMESTAMPTZ",note:"Timestamp de la lectura en el PLC"},
+     {n:"received_at",t:"TIMESTAMPTZ",note:"Timestamp de recepción en servidor"},
+   ],
+   note:"PARTICIÓN por mes (TimescaleDB hypertable ó pg_partman). Retención: 2 años raw, luego downsample a promedios horarios."},
+  {name:"reconciliation_runs",color:"var(--amber)",desc:"Cada ejecución de reconciliación — 1 por día por estación",
+   cols:[
+     {n:"id",t:"SERIAL",note:"PK"},
+     {n:"station_id",t:"INT",note:"FK → stations"},
+     {n:"run_date",t:"DATE",note:"Fecha del cierre reconciliado"},
+     {n:"status",t:"VARCHAR(10)",note:"OK | WARNING | CRITICAL"},
+     {n:"source_a_total",t:"DECIMAL(12,2)",note:"Total GasUp del día (litros)"},
+     {n:"source_b_total",t:"DECIMAL(12,3)",note:"Total E+H del día (kg)"},
+     {n:"source_c_delta",t:"DECIMAL(12,2)",note:"Delta totalizador SCADA (Nm³)"},
+     {n:"source_d_total",t:"DECIMAL(12,2)",note:"Total asientos Odoo (MXN)"},
+     {n:"checks_json",t:"JSONB",note:"Resultado detallado de los 7 checks"},
+     {n:"discrepancies",t:"JSONB",note:"Array de discrepancias encontradas"},
+     {n:"resolved",t:"BOOLEAN",note:"true si todas las discrepancias se resolvieron"},
+     {n:"created_at",t:"TIMESTAMPTZ",note:"Timestamp de ejecución"},
+   ]},
+  {name:"alerts",color:"var(--rose)",desc:"Historial de alertas emitidas",
+   cols:[
+     {n:"id",t:"SERIAL",note:"PK"},
+     {n:"station_id",t:"INT",note:"FK → stations"},
+     {n:"source",t:"VARCHAR(20)",note:"SCADA | RECONCILIATION | HEARTBEAT | SYSTEM"},
+     {n:"severity",t:"VARCHAR(10)",note:"INFO | WARNING | CRITICAL | EMERGENCY"},
+     {n:"variable",t:"VARCHAR(30)",note:"Qué variable disparó la alerta"},
+     {n:"value",t:"DECIMAL(12,4)",note:"Valor que excedió el umbral"},
+     {n:"threshold",t:"DECIMAL(12,4)",note:"Umbral configurado"},
+     {n:"message",t:"TEXT",note:"Mensaje enviado por WhatsApp"},
+     {n:"acknowledged",t:"BOOLEAN",note:"true si admin respondió"},
+     {n:"resolved",t:"BOOLEAN",note:"true si condición volvió a normal"},
+     {n:"created_at",t:"TIMESTAMPTZ",note:"Timestamp de la alerta"},
+   ]},
+  {name:"mat_inventory",color:"var(--sky)",desc:"Estado de cada MAT en el sistema",
+   cols:[
+     {n:"mat_id",t:"VARCHAR(10)",note:"PK. MAT-001, MAT-002, etc."},
+     {n:"current_station",t:"INT",note:"FK → stations. Dónde está ahora."},
+     {n:"status",t:"VARCHAR(15)",note:"FULL | IN_USE | DEPLETED | IN_TRANSIT | CHARGING"},
+     {n:"pressure_bar",t:"DECIMAL(6,1)",note:"Última presión conocida (del SCADA)"},
+     {n:"capacity_nm3",t:"DECIMAL(10,1)",note:"9,261 Nm³ (LUXI 12-tube)"},
+     {n:"estimated_remaining",t:"DECIMAL(8,1)",note:"Nm³ estimados restantes"},
+     {n:"last_swap_at",t:"TIMESTAMPTZ",note:"Último swap en estación"},
+     {n:"last_charge_at",t:"TIMESTAMPTZ",note:"Último inicio de compresión en hub"},
+     {n:"cycle_count",t:"INT",note:"Total de ciclos carga/descarga (vida útil)"},
+   ]},
+  {name:"daily_close (VIEW)",color:"var(--emerald)",desc:"Vista materializada — cierre consolidado diario",
+   cols:[
+     {n:"station_id",t:"INT",note:"Estación"},
+     {n:"close_date",t:"DATE",note:"Fecha del cierre"},
+     {n:"total_litros",t:"DECIMAL",note:"SUM(transactions.litros) del día"},
+     {n:"total_kg",t:"DECIMAL",note:"SUM(transactions.kg) del día"},
+     {n:"total_mxn",t:"DECIMAL",note:"SUM(transactions.total_mxn) del día"},
+     {n:"total_nm3_compressed",t:"DECIMAL",note:"Delta totalizador SCADA del día"},
+     {n:"efficiency_pct",t:"DECIMAL",note:"(despachado / comprimido) × 100"},
+     {n:"avg_pvp",t:"DECIMAL",note:"Precio promedio ponderado por litro"},
+     {n:"unique_placas",t:"INT",note:"COUNT(DISTINCT placa) del día"},
+     {n:"reconc_status",t:"VARCHAR",note:"Del reconciliation_runs"},
+     {n:"anomaly_count",t:"INT",note:"Total anomalías detectadas"},
+   ],
+   note:"REFRESH MATERIALIZED VIEW CONCURRENTLY cada noche a las 23:30 UTC-6"},
+];
+
+const PIPELINES=[
+  {name:"Real-Time",color:"var(--rose)",latency:"< 1 segundo",trigger:"Lectura SCADA vía MQTT",
+   flow:["PLC lee sensor cada 1s internamente","PLC publica vía snap7 cada 30s → servidor","Servidor publica MQTT: scada/{station}/{variable}","MQTT Handler recibe → ring buffer + batch DB write","Si value > threshold → Alert Engine trigger","Alert Engine → evalúa cooldown → WhatsApp si procede"],
+   errorHandling:"Si MQTT broker cae: paho-mqtt auto-reconnect con backoff 1s→2s→4s→8s→30s (max). Datos perdidos durante desconexión. Si PLC inalcanzable >90s: alerta HEARTBEAT_LOST.",
+   volume:"~2,880 mensajes/día/estación (48 variables × 2 lecturas/min × 30s). 3 estaciones = ~8,640 msg/día."},
+  {name:"Near-Real-Time",color:"var(--cyan)",latency:"< 5 minutos",trigger:"Nueva transacción en GasUp",
+   flow:["GasUp registra transacción en BackOffice","Agente poll cada 5 min: GET /api/transactions?since=last_check","ó: webhook push inmediato si GasUp soporta","Parser normaliza → valida → detecta anomalías","Odoo Client crea asiento: Débito Caja + Crédito Ingreso","Si crédito → actualiza CxC del flotillero","Log en PostgreSQL transactions table"],
+   errorHandling:"Si GasUp API timeout: retry 3x con backoff. Si falla persistente >15 min: alerta admin + switch a modo CSV manual. Si Odoo down: queue en PostgreSQL, replay cuando Odoo vuelva.",
+   volume:"~50-100 transacciones/día/estación. 3 estaciones = ~150-300 transacciones/día."},
+  {name:"Batch Diario",color:"var(--violet)",latency:"23:00 CST",trigger:"Cron scheduler",
+   flow:["23:00 — Trigger cron: daily_close_job","Solicita cierre a GasUp HeadOffice (API ó CSV)","Consulta SCADA: totalizador delta últimas 24h","Consulta Odoo: asientos del día por estación","Ejecuta Motor Reconciliación: 7 checks","Genera ReconciliationResult → PostgreSQL","Si OK → póliza cierre Odoo + actualiza Kardex","Calcula métricas: margen, eficiencia, mermas","Genera mensaje cierre → WhatsApp a Josue","Refresh materialized view daily_close"],
+   errorHandling:"Si una fuente no responde: reconciliación parcial (marca fuente faltante). Reintento a las 23:30 y 00:00. Si falla 3x: cierre manual requerido + alerta CRITICAL.",
+   volume:"1 ejecución/noche/estación. Procesamiento ~30 segundos. Resultado: 1 registro reconciliation_runs + 1 WhatsApp."},
+  {name:"On-Demand",color:"var(--lime)",latency:"< 10 segundos",trigger:"WhatsApp del flotillero",
+   flow:["Flotillero envía WhatsApp: '¿Cuánto debo?'","Webhook Meta → servidor → WhatsApp Bot","Bot identifica intent: SALDO","Bot identifica cliente por número WhatsApp → tabla clientes","Consulta Odoo CxC: res.partner.credit_used","Consulta GasUp: últimas 5 transacciones","Compone respuesta: saldo + detalle reciente","Envía vía Meta Cloud API → flotillero recibe"],
+   errorHandling:"Si cliente no identificado: pedir placa → buscar en catálogo. Si intent ambiguo: preguntar opciones. Si Odoo/GasUp down: 'Sistema en mantenimiento, intenta en 15 min.'",
+   volume:"~10-30 consultas/día. Picos: lunes AM (consultas de fin de semana) y fin de mes (facturas)."}
+];
+
+const PHASES=[
+  {name:"MVP — Lo que ya mata 3 horas diarias",weeks:"Semanas 1-4",color:"var(--emerald)",
+   deliverables:["Parser GasUp CSV funcional (17→20 campos normalizados)","Odoo Client: creación automática de asientos por transacción","Cierre diario automático con reporte WhatsApp a Josue","Reconciliación simple: A = D (GasUp vs Odoo, 0% tolerancia)"],
+   dependencies:["Export CSV de GasUp HeadOffice (ya disponible)","Odoo 17 instalado y configurado (plan de cuentas, PAC)","WhatsApp Business API con template de cierre aprobado","Servidor: VPS $10/mes ó Mac Mini"],
+   criteria:["Parser procesa 100% de CSVs sin error por 7 días consecutivos","Asientos Odoo coinciden 100% con reporte GasUp","WhatsApp cierre llega antes de las 23:30 todos los días","Tiempo manual diario baja de 3h a 15 min (solo revisión)"],
+   risk:"Bajo. Todo depende de datos que ya existen (CSV). Sin hardware nuevo."},
+  {name:"SCADA + Alertas — El testigo independiente",weeks:"Semanas 5-8",color:"var(--orange)",
+   deliverables:["Conexión snap7 al PLC S7-1200 funcional","MQTT Handler con escritura PostgreSQL","Alert Engine con umbrales configurables","Alertas WhatsApp para SCADA: presión, temperatura, alarmas","Reconciliación A ≈ B: GasUp vs E+H Coriolis (±2%)"],
+   dependencies:["PLC Tag List de Sebastián (SAFE/STAR) — BLOQUEANTE","Teltonika RUT956 instalado con VPN WireGuard","Starlink ó 4G operativo en al menos 1 estación","PostgreSQL con tabla scada_readings + particionado"],
+   criteria:["Lecturas SCADA llegan cada 30s sin pérdida por 7 días","Alertas WhatsApp llegan en <60s desde evento","Zero false positives en alertas por 3 días consecutivos","Reconciliación B detecta discrepancia inyectada artificialmente"],
+   risk:"Medio. Depende de PLC Tag List (external dependency) y hardware de red."},
+  {name:"Reconciliación Completa + Bot",weeks:"Semanas 9-12",color:"var(--amber)",
+   deliverables:["Reconciliación cuádruple completa (7 checks)","WhatsApp Bot para flotilleros (saldo, factura, estado cuenta)","Forecast MAT basado en histórico de consumo","Conciliación bancaria semi-automática (match por monto)","CFDI 4.0 automático con envío por WhatsApp"],
+   dependencies:["API documentation de GasUp (para datos E+H) — BLOQUEANTE","3+ meses de datos SCADA históricos (para forecast)","Templates WhatsApp aprobados para factura y saldo","Cuenta bancaria con acceso API ó SFTP"],
+   criteria:["Reconciliación 4 fuentes cuadra >95% de días sin intervención","Bot responde correctamente >90% de consultas de flotilleros","Forecast MAT predice necesidad de rotación con >80% accuracy","CFDI timbrado y enviado en <2 min desde solicitud"],
+   risk:"Alto. Depende de GasUp API documentation (major external dependency)."},
+  {name:"Automatización Total + Regulatorio",weeks:"Mes 4+",color:"var(--violet)",
+   deliverables:["Reportes regulatorios automáticos (SASISOPA, CRE, SEMARNAT)","Conciliación bancaria completamente automática","Dashboard web con métricas en tiempo real","Multi-estación: un agente orquesta las 3 EDS","Tracking GPS de SITRAK para rotación MAT","Complemento Carta Porte CFDI automático"],
+   dependencies:["Fases 1-3 estables y sin bugs por 30+ días","Templates DOCX de reportes regulatorios definidos","Todas las integraciones funcionando en producción","Equipo SITRAK con Teltonika GPS instalado"],
+   criteria:["Reportes SASISOPA se generan sin intervención manual","Dashboard muestra datos <5 min de antigüedad","Downtime del agente <1% mensual","Flotilleros califican servicio WhatsApp >4/5"],
+   risk:"Bajo (si fases previas son sólidas). Es principalmente polish y automatización."}
+];
+
+const STACKS=[
+  {name:"Claude API Directo",color:"var(--emerald)",recommended:true,
+   arch:[
+     {component:"FastAPI Server",detail:"Python 3.12. Endpoints: /webhook/whatsapp, /cron/daily-close, /health. Uvicorn + Gunicorn."},
+     {component:"Anthropic SDK",detail:"claude-sonnet-4-5 para NLP (intent detection, respuestas a flotilleros). System prompt con contexto GNC completo."},
+     {component:"PostgreSQL 16",detail:"7 tablas + 1 materialized view. TimescaleDB extension para scada_readings. pg_cron para scheduled jobs."},
+     {component:"Mosquitto MQTT",detail:"Broker local. Topics: scada/+/+, alerts/+. QoS 1 para datos SCADA, QoS 2 para alertas."},
+     {component:"snap7 + pymodbus",detail:"Clients para PLC. snap7 para protocolo S7 nativo. pymodbus como fallback Modbus TCP."},
+     {component:"Docker Compose",detail:"4 containers: api, postgres, mosquitto, worker (cron jobs). Volumes para persistencia."},
+   ],
+   deploy:"VPS (Hetzner $10/mes ó DigitalOcean $12/mes) ó Mac Mini local. Docker Compose up -d. Nginx reverse proxy + Let's Encrypt SSL.",
+   monitoring:"Healthcheck endpoint /health cada 60s (UptimeRobot gratis). PostgreSQL: pg_stat_activity. MQTT: mosquitto logs. Docker: restart=unless-stopped.",
+   backup:"pg_dump diario a R2/S3 ($0.015/GB). Retención: 30 días diarios + 12 meses mensuales. Recovery: pg_restore < 5 min.",
+   costs:[
+     {item:"Claude API (sonnet)",monthly:"$30-80 USD",note:"~500-2000 llamadas/mes según volumen de consultas"},
+     {item:"VPS",monthly:"$10-15 USD",note:"4 vCPU, 8GB RAM, 80GB NVMe"},
+     {item:"Twilio WhatsApp",monthly:"$15-30 USD",note:"~500 msgs/mes a $0.05/msg"},
+     {item:"Domain + SSL",monthly:"$1 USD",note:"Cloudflare (gratis) + dominio barato"},
+     {item:"TOTAL",monthly:"$56-126 USD",note:"~$1,000-2,200 MXN/mes"},
+   ]},
+  {name:"OpenClaw Framework",color:"var(--orange)",
+   arch:[
+     {component:"OpenClaw Runtime",detail:"Node.js. Skills en Python/JS. Auto-discovery de skills en directorio /skills."},
+     {component:"Skill: GasUp Parser",detail:"Python skill. Triggered por cron cada 5 min ó por file watcher."},
+     {component:"Skill: SCADA Monitor",detail:"Python skill. MQTT subscriber nativo de OpenClaw."},
+     {component:"Skill: Odoo Client",detail:"Python skill. XML-RPC wrapper con retry built-in."},
+     {component:"Skill: Reconciliation",detail:"Python skill. Triggered por cron 23:00."},
+     {component:"Built-in: Heartbeat",detail:"Auto-recovery si skill crashea. Restart con backoff."},
+   ],
+   deploy:"Mac Mini local. npm install -g openclaw. openclaw start --skills-dir ./skills. Sin Docker necesario (pero recomendado).",
+   monitoring:"OpenClaw dashboard built-in (puerto 3000). Logs por skill. Heartbeat automático por skill.",
+   backup:"Mismo que Claude API: pg_dump a R2/S3.",
+   costs:[
+     {item:"LLM API (cualquier provider)",monthly:"$30-80 USD",note:"OpenClaw es agnóstico: Claude, GPT, Llama"},
+     {item:"Mac Mini (one-time)",monthly:"$0",note:"$15,000-25,000 MXN one-time"},
+     {item:"Twilio WhatsApp",monthly:"$15-30 USD",note:"Mismo volumen"},
+     {item:"TOTAL",monthly:"$45-110 USD",note:"~$800-2,000 MXN/mes + hardware"},
+   ]},
+  {name:"MCP (Claude Nativo)",color:"var(--amber)",
+   arch:[
+     {component:"Claude.ai / API",detail:"Claude como runtime. Cada tool call = una consulta a sistema externo."},
+     {component:"MCP Server: GasUp",detail:"Por desarrollar. Expone tools: get_transactions, get_daily_close, get_client."},
+     {component:"MCP Server: Odoo",detail:"Existe en GitHub (odoo-mcp-server). Tools: create_move, get_partner, create_invoice."},
+     {component:"MCP Server: SCADA",detail:"Por desarrollar. Expone tools: get_readings, get_alerts, get_totalizador."},
+     {component:"MCP Server: WhatsApp",detail:"Por desarrollar. Tools: send_message, get_incoming, send_template."},
+     {component:"Scheduling",detail:"NO hay scheduling nativo. Requiere cron externo que invoque Claude API con prompt de cierre."},
+   ],
+   deploy:"MCP servers corren local (Mac Mini ó VPS). Claude.ai los conecta vía MCP protocol. Para batch: cron que llama Claude API.",
+   monitoring:"Claude.ai no tiene monitoring. MCP servers: logs locales. Cron: monitorear que ejecución completó.",
+   backup:"Datos en PostgreSQL (mismo backup). MCP servers son stateless.",
+   costs:[
+     {item:"Claude Pro",monthly:"$20 USD",note:"Ideal para fase exploratoria y testing"},
+     {item:"ó Claude API",monthly:"$30-80 USD",note:"Para producción con cron"},
+     {item:"MCP server hosting",monthly:"$0-10 USD",note:"Local ó VPS mínimo"},
+     {item:"TOTAL",monthly:"$20-90 USD",note:"~$350-1,600 MXN/mes"},
+   ]}
+];
+
+// ═══════════════ RENDER ENGINE ═══════════════
+let curTab=0, curInteg=0, curMod=0, curTable=0, curPipe=0, curPhase=0, curStack=0;
+
+function showTab(i){
+  curTab=i;
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('on',j===i));
+  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('on',j===i));
+}
+function bc(color,text){return `<span class="badge" style="background:${color}22;color:${color};border:1px solid ${color}44">${text}</span>`}
+function hst(color,text){return `<h3 class="st" style="color:${color}">${text}</h3>`}
+
+// ═══════ TAB 0: INTEGRACIONES ═══════
+function renderInteg(){
+  const ig=INTEG[curInteg];
+  let nav='';
+  INTEG.forEach((x,i)=>{
+    const on=i===curInteg;
+    nav+=`<div class="nav-item" onclick="curInteg=${i};renderInteg()" style="background:${on?x.color+'15':'transparent'};border-color:${on?x.color+'55':'var(--border)'}">
+      <div class="nav-icon" style="background:${x.color}20">${x.icon}</div>
+      <div><div style="color:${on?x.color:'var(--text)'};font-size:11px;font-weight:700">${x.name}</div><div style="color:var(--dim);font-size:8px">${x.sub.split('—')[0]}</div></div></div>`;
+  });
+  let methods='';ig.methods.forEach(m=>{
+    const sc=m.status.includes('Recomendado')||m.status.includes('Confirmado')?'var(--emerald)':m.status.includes('Pendiente')?'var(--amber)':'var(--dim)';
+    methods+=`<div style="margin-bottom:10px;padding:10px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="color:var(--text);font-size:12px;font-weight:700">${m.m}</span>${bc(sc,m.status)}</div>
+      <div style="color:var(--muted);font-size:10px;line-height:1.5">${m.detail}</div></div>`});
+  let fields='';
+  fields+=`<div class="field-row"><span class="field-hdr">Campo</span><span class="field-hdr">Tipo</span><span class="field-hdr">Notas</span></div>`;
+  ig.fields.forEach(f=>{fields+=`<div class="field-row"><span style="color:${ig.color};font-weight:600" class="mono">${f.n}</span><span style="color:var(--muted)" class="mono">${f.type}</span><span style="color:var(--dim)">${f.note}</span></div>`});
+  let issues='';ig.issues.forEach(is=>{issues+=`<div style="color:var(--rose);font-size:10px;line-height:1.7;padding-left:10px;border-left:2px solid var(--rose)33;margin-bottom:4px">⚠ ${is}</div>`});
+
+  document.getElementById('p0').innerHTML=`<div style="display:flex;gap:16px;min-height:500px">
+    <div class="nav-side">${nav}</div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:14px">
+      <div style="background:${ig.color}0c;border:1px solid ${ig.color}30;border-radius:12px;padding:16px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="font-size:24px">${ig.icon}</span>
+          <div><h2 style="color:${ig.color};margin:0;font-size:17px;font-weight:800">${ig.name}</h2><p style="color:var(--muted);margin:0;font-size:11px">${ig.sub}</p></div></div></div>
+      <div class="grid2">
+        <div class="card">${hst(ig.color,'Métodos de Conexión')}${methods}</div>
+        <div class="card">${hst(ig.color,'Campos / Estructura')}${fields}</div>
+      </div>
+      <div class="grid2">
+        <div class="card">${hst('var(--rose)','Problemas Conocidos')}${issues}</div>
+        <div style="background:var(--emerald)0c;border:1px solid var(--emerald)30;border-radius:10px;padding:14px">
+          ${hst('var(--emerald)','Acción Requerida')}
+          <div style="color:var(--text);font-size:11px;line-height:1.6">${ig.action}</div></div>
+      </div>
+    </div></div>`;
+}
+
+// ═══════ TAB 1: MÓDULOS ═══════
+function renderMod(){
+  const md=MODULES[curMod];
+  let nav='';
+  MODULES.forEach((x,i)=>{
+    const on=i===curMod;
+    nav+=`<div class="nav-item" onclick="curMod=${i};renderMod()" style="background:${on?x.color+'15':'transparent'};border-color:${on?x.color+'55':'var(--border)'}">
+      <div class="nav-icon" style="background:${x.color}20">${x.icon}</div>
+      <div style="color:${on?x.color:'var(--text)'};font-size:10px;font-weight:${on?700:500}">${x.name}</div></div>`;
+  });
+  let inputs='';md.inputs.forEach(x=>{inputs+=`<div style="color:var(--cyan);font-size:10px;line-height:1.8;padding-left:8px;border-left:2px solid var(--cyan)30">→ ${x}</div>`});
+  let outputs='';md.outputs.forEach(x=>{outputs+=`<div style="color:var(--emerald);font-size:10px;line-height:1.8;padding-left:8px;border-left:2px solid var(--emerald)30">← ${x}</div>`});
+  let logic='';md.logic.forEach((x,i)=>{logic+=`<div style="color:var(--text);font-size:10px;line-height:1.8"><span style="color:${md.color};font-weight:700" class="mono">${i+1}.</span> ${x}</div>`});
+  let deps='';md.deps.forEach(x=>{deps+=`<code>${x}</code> `});
+  let errs='';md.errors.forEach(x=>{errs+=`<div style="color:var(--rose);font-size:10px;line-height:1.7;padding-left:8px;border-left:2px solid var(--rose)30;margin-bottom:3px">${x}</div>`});
+
+  document.getElementById('p1').innerHTML=`<div style="display:flex;gap:16px;min-height:500px">
+    <div class="nav-side">${nav}</div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:14px">
+      <div style="background:${md.color}0c;border:1px solid ${md.color}30;border-radius:12px;padding:16px">
+        <div style="display:flex;align-items:center;gap:10px"><span style="font-size:24px">${md.icon}</span>
+          <h2 style="color:${md.color};margin:0;font-size:17px;font-weight:800">${md.name}</h2></div></div>
+      <div class="grid3">
+        <div class="card">${hst('var(--cyan)','Inputs')}${inputs}<div style="margin-top:14px">${hst('var(--emerald)','Outputs')}</div>${outputs}</div>
+        <div class="card">${hst(md.color,'Lógica Interna')}${logic}</div>
+        <div class="card">${hst('var(--muted)','Dependencias')}${deps}<div style="margin-top:14px">${hst('var(--rose)','Manejo de Errores')}</div>${errs}</div>
+      </div>
+    </div></div>`;
+}
+
+// ═══════ TAB 2: MODELO DATOS ═══════
+function renderTables(){
+  const tb=TABLES[curTable];
+  let nav='';
+  TABLES.forEach((x,i)=>{
+    const on=i===curTable;
+    nav+=`<div class="nav-item" onclick="curTable=${i};renderTables()" style="background:${on?x.color+'15':'transparent'};border-color:${on?x.color+'55':'var(--border)'}">
+      <div style="color:${on?x.color:'var(--muted)'};font-size:10px;font-weight:${on?700:500}" class="mono">${x.name}</div></div>`;
+  });
+  let cols='';
+  cols+=`<div class="field-row" style="grid-template-columns:140px 130px 1fr"><span class="field-hdr">Columna</span><span class="field-hdr">Tipo</span><span class="field-hdr">Notas</span></div>`;
+  tb.cols.forEach(c=>{cols+=`<div class="field-row" style="grid-template-columns:140px 130px 1fr"><span style="color:${tb.color};font-weight:600" class="mono">${c.n}</span><span style="color:var(--muted)" class="mono">${c.t}</span><span style="color:var(--dim)">${c.note}</span></div>`});
+
+  document.getElementById('p2').innerHTML=`<div style="display:flex;gap:16px;min-height:500px">
+    <div class="nav-side">${nav}</div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:14px">
+      <div style="background:${tb.color}0c;border:1px solid ${tb.color}30;border-radius:12px;padding:16px">
+        <h2 style="color:${tb.color};margin:0 0 4px 0;font-size:17px;font-weight:800" class="mono">${tb.name}</h2>
+        <p style="color:var(--muted);margin:0;font-size:11px">${tb.desc}</p></div>
+      <div class="card">${hst(tb.color,'Schema')}${cols}</div>
+      ${tb.note?`<div style="background:var(--amber)0c;border:1px solid var(--amber)30;border-radius:8px;padding:10px 14px"><span style="color:var(--amber);font-size:10px;font-weight:700">NOTA: </span><span style="color:var(--text);font-size:10px">${tb.note}</span></div>`:''}</div></div>`;
+}
+
+// ═══════ TAB 3: PIPELINES ═══════
+function renderPipes(){
+  let html='<div style="display:flex;flex-direction:column;gap:16px">';
+  PIPELINES.forEach(p=>{
+    let flow='';p.flow.forEach((s,i)=>{
+      flow+=`<div style="display:flex;gap:8px;align-items:flex-start"><div style="min-width:22px;height:22px;border-radius:50%;background:${p.color}20;border:2px solid ${p.color};display:flex;align-items:center;justify-content:center;color:${p.color};font-size:8px;font-weight:800" class="mono">${i+1}</div><div style="color:var(--text);font-size:10px;line-height:1.6;padding-top:3px">${s}</div></div>`;
+    });
+    html+=`<div class="card" style="border-left:4px solid ${p.color}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px"><h3 style="color:${p.color};margin:0;font-size:15px;font-weight:800">${p.name}</h3>${bc(p.color,p.latency)}</div>
+        <span style="color:var(--dim);font-size:10px">Trigger: ${p.trigger}</span></div>
+      <div class="grid3">
+        <div style="display:flex;flex-direction:column;gap:8px">${flow}</div>
+        <div><div style="color:var(--rose);font-size:10px;font-weight:700;margin-bottom:6px">ERROR HANDLING</div><div style="color:var(--muted);font-size:10px;line-height:1.6">${p.errorHandling}</div></div>
+        <div><div style="color:var(--muted);font-size:10px;font-weight:700;margin-bottom:6px">VOLUMEN ESTIMADO</div><div style="color:var(--text);font-size:10px;line-height:1.6">${p.volume}</div></div>
+      </div></div>`;
+  });
+  html+='</div>';
+  document.getElementById('p3').innerHTML=html;
+}
+
+// ═══════ TAB 4: FASES ═══════
+function renderPhases(){
+  let html='<div style="display:flex;flex-direction:column;gap:24px">';
+  PHASES.forEach((ph,idx)=>{
+    let deliverables='';ph.deliverables.forEach(d=>{deliverables+=`<div class="del-tag">${d}</div>`});
+    let dependencies='';ph.dependencies.forEach(d=>{
+      const isBlock=d.includes('BLOQUEANTE');
+      dependencies+=`<div class="${isBlock?'dep-tag':'del-tag'}" style="${isBlock?'':'background:var(--amber)15;color:var(--amber);border-color:var(--amber)33'}">${d}</div>`;
+    });
+    let criteria='';ph.criteria.forEach(c=>{criteria+=`<div style="color:var(--text);font-size:10px;line-height:1.7;padding-left:8px;border-left:2px solid ${ph.color}30">✓ ${c}</div>`});
+    html+=`<div class="phase-card" style="border-color:${ph.color}40;background:${ph.color}05">
+      <div class="phase-num" style="background:${ph.color};color:var(--bg)">FASE ${idx+1}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0 14px 0">
+        <h3 style="color:${ph.color};margin:0;font-size:15px;font-weight:800">${ph.name}</h3>${bc(ph.color,ph.weeks)}</div>
+      <div class="grid2" style="gap:14px">
+        <div><div style="color:var(--emerald);font-size:10px;font-weight:700;margin-bottom:6px">ENTREGABLES</div><div style="display:flex;flex-wrap:wrap;gap:3px">${deliverables}</div></div>
+        <div><div style="color:var(--rose);font-size:10px;font-weight:700;margin-bottom:6px">DEPENDENCIAS</div><div style="display:flex;flex-wrap:wrap;gap:3px">${dependencies}</div></div>
+      </div>
+      <div class="grid2" style="gap:14px;margin-top:12px">
+        <div>${hst(ph.color,'Criterio de Aceptación')}${criteria}</div>
+        <div style="padding:10px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+          <div style="color:var(--amber);font-size:10px;font-weight:700;margin-bottom:4px">NIVEL DE RIESGO</div>
+          <div style="color:var(--text);font-size:11px;line-height:1.5">${ph.risk}</div></div>
+      </div></div>`;
+  });
+  html+='</div>';
+  document.getElementById('p4').innerHTML=html;
+}
+
+// ═══════ TAB 5: STACK ═══════
+function renderStack(){
+  let opts='';STACKS.forEach((s,i)=>{
+    const on=i===curStack;
+    opts+=`<div class="agent-opt" onclick="curStack=${i};renderStack()" style="background:${on?s.color+'15':'var(--card)'};border:1px solid ${on?s.color+'50':'var(--border)'}">
+      <div style="color:${s.color};font-size:13px;font-weight:700">${s.name}</div>
+      ${s.recommended?bc('var(--emerald)','RECOMENDADO'):''}</div>`;
+  });
+  const s=STACKS[curStack];
+  let arch='';s.arch.forEach(a=>{arch+=`<div style="margin-bottom:10px"><div style="color:var(--text);font-size:11px;font-weight:700">${a.component}</div><div style="color:var(--muted);font-size:10px;line-height:1.5">${a.detail}</div></div>`});
+  let costs='';s.costs.forEach(c=>{
+    const isTotal=c.item==='TOTAL';
+    costs+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);${isTotal?'border-top:2px solid var(--amber);margin-top:4px;padding-top:8px':''}">
+      <span style="color:${isTotal?'var(--amber)':'var(--muted)'};font-size:10px;font-weight:${isTotal?700:400}">${c.item}</span>
+      <div style="text-align:right"><span style="color:${isTotal?'var(--amber)':'var(--text)'};font-size:${isTotal?13:11}px;font-weight:700" class="mono">${c.monthly}</span><div style="color:var(--dim);font-size:8px">${c.note}</div></div></div>`;
+  });
+  document.getElementById('p5').innerHTML=`<div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:6px">${opts}</div>
+    <div class="grid2">
+      <div class="card">${hst(s.color,'Arquitectura de Componentes')}${arch}</div>
+      <div class="card">${hst('var(--amber)','Costos Mensuales')}${costs}</div>
+    </div>
+    <div class="grid3">
+      <div class="card">${hst('var(--emerald)','Despliegue')}<div style="color:var(--text);font-size:10px;line-height:1.6">${s.deploy}</div></div>
+      <div class="card">${hst('var(--cyan)','Monitoreo')}<div style="color:var(--text);font-size:10px;line-height:1.6">${s.monitoring}</div></div>
+      <div class="card">${hst('var(--violet)','Backup & Recovery')}<div style="color:var(--text);font-size:10px;line-height:1.6">${s.backup}</div></div>
+    </div></div>`;
+}
+
+// INIT
+renderInteg();renderMod();renderTables();renderPipes();renderPhases();renderStack();
+</script>
+</body>
+</html>
