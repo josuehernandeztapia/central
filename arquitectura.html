@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Central Gas — Arquitectura GNC Aguascalientes v3</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
+  :root {
+    --bg:#080c14;--card:#0d1420;--border:#1a2236;
+    --cyan:#22d3ee;--orange:#f97316;--violet:#a78bfa;
+    --emerald:#34d399;--rose:#fb7185;--amber:#fbbf24;
+    --sky:#38bdf8;--lime:#a3e635;
+    --text:#e2e8f0;--muted:#94a3b8;--dim:#64748b;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;padding:20px 18px;min-height:100vh}
+  .wrap{max-width:1080px;margin:0 auto}
+  h1{font-size:20px;font-weight:800}
+  h1 .g{color:var(--emerald)} h1 .m{color:var(--muted)}
+  .sub{color:var(--dim);font-size:10px;font-family:'JetBrains Mono',monospace;margin-top:3px}
+  .tabs{display:flex;gap:3px;margin:18px 0;background:var(--card);padding:3px;border-radius:10px;border:1px solid var(--border)}
+  .tab{flex:1;padding:9px 6px;border:none;border-radius:8px;cursor:pointer;background:transparent;color:var(--muted);font-size:11px;font-weight:500;font-family:'JetBrains Mono',monospace;transition:all .2s}
+  .tab.on{background:rgba(52,211,153,.13);color:var(--emerald);font-weight:700}
+  .tab:hover:not(.on){color:var(--text)}
+  .panel{display:none}.panel.on{display:block}
+  .badge{display:inline-block;border-radius:6px;padding:2px 10px;font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace}
+  .st{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;font-family:'JetBrains Mono',monospace;margin:0 0 10px 0}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .mono{font-family:'JetBrains Mono',monospace}
+  .flex{display:flex}.col{flex-direction:column}.gap14{gap:14px}.gap12{gap:12px}.gap6{gap:6px}.gap5{gap:5px}.gap3{gap:3px}
+
+  /* CAPAS sidebar */
+  .capas-wrap{display:flex;gap:16px;min-height:480px}
+  .capas-nav{width:210px;flex-shrink:0;display:flex;flex-direction:column;gap:5px}
+  .capas-item{border-radius:10px;padding:9px 11px;cursor:pointer;border-left:3px solid transparent;transition:all .2s}
+  .capas-item:hover{background:rgba(255,255,255,.03)}
+  .capas-item .id{font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace}
+  .capas-item .nm{color:var(--text);font-size:12px;font-weight:600}
+  .capas-item .sb{color:var(--dim);font-size:9px;margin-top:3px}
+  .capas-detail{flex:1;display:flex;flex-direction:column;gap:14px}
+
+  /* FLUJOS sidebar */
+  .flujos-wrap{display:flex;gap:14px;min-height:480px}
+  .flujos-nav{width:195px;flex-shrink:0;display:flex;flex-direction:column;gap:3px}
+  .flujo-item{border-radius:8px;padding:7px 10px;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .2s}
+  .flujo-item:hover{background:rgba(255,255,255,.03)}
+  .step-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;font-family:'JetBrains Mono',monospace}
+  .step-line{width:2px;height:28px}
+
+  /* RECONC */
+  .check-row{display:grid;grid-template-columns:70px 1fr 100px 1fr;gap:8px;align-items:center;padding:8px 12px}
+  .vs-box{border-radius:10px;padding:14px}
+  .vs-num{font-size:28px;font-weight:800}
+
+  /* AGENT */
+  .agent-opt{flex:1;border-radius:10px;padding:10px 14px;cursor:pointer;text-align:center;transition:all .2s}
+  .agent-opt:hover{filter:brightness(1.1)}
+
+  /* CONN */
+  .conn-cost{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:7px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span class="g">CENTRAL GAS</span><span class="m"> — Arquitectura GNC Aguascalientes</span></h1>
+  <p class="sub">v3 — Hub & Spoke · 3 EDS · 5 Capas · 8 Flujos · Reconciliación Cuádruple · CRE G/24214/DIS/OM/2022</p>
+
+  <div class="tabs">
+    <button class="tab on" onclick="showTab(0)">5 Capas</button>
+    <button class="tab" onclick="showTab(1)">8 Flujos</button>
+    <button class="tab" onclick="showTab(2)">Reconciliación</button>
+    <button class="tab" onclick="showTab(3)">Agente IA</button>
+    <button class="tab" onclick="showTab(4)">Conectividad</button>
+  </div>
+
+  <!-- ═══════════════ TAB 0: CAPAS ═══════════════ -->
+  <div class="panel on" id="p0"></div>
+  <!-- ═══════════════ TAB 1: FLUJOS ═══════════════ -->
+  <div class="panel" id="p1"></div>
+  <!-- ═══════════════ TAB 2: RECONCILIACIÓN ═══════════════ -->
+  <div class="panel" id="p2"></div>
+  <!-- ═══════════════ TAB 3: AGENTE ═══════════════ -->
+  <div class="panel" id="p3"></div>
+  <!-- ═══════════════ TAB 4: CONECTIVIDAD ═══════════════ -->
+  <div class="panel" id="p4"></div>
+</div>
+
+<script>
+// ═══════════════ DATA ═══════════════
+const CAPAS=[
+  {id:"1",name:"GasUp POS",sub:"La Caja Registradora",color:"var(--cyan)",icon:"💳",
+   desc:"Gasdata/Consware — BackOffice en cada EDS + HeadOffice en nube. Controla dispensarios Censtar, registra ventas, maneja clientes/créditos/prepago.",
+   comps:[{n:"BackOffice",d:"Servidor local en cada EDS. Comunica con Censtar JQD-B30B vía Modbus RTU RS-485. Autoriza/bloquea despacho."},
+          {n:"HeadOffice",d:"Nube Gasdata. Consolida 3 EDS. 26 reportes: ventas, conciliación, cartera, fidelización."},
+          {n:"Portal Clientes",d:"App/web para flotilleros. Consulta saldos, historial, facturas."}],
+   data:["Transacciones (17 campos): fecha, placa, litros, PVP, medio_pago, segmento","Conciliación diaria por EDS","Catálogos: clientes, vehículos, créditos, precios"],
+   proto:"API REST (pendiente confirmar) ó CSV export → Agente parsea"},
+  {id:"2A",name:"GasUp Edge",sub:"Dispensario — Territorio GasUp",color:"var(--sky)",icon:"⛽",
+   desc:"Hardware que GasUp controla. Tú NO lo tocas. Censtar + E+H Coriolis integrado.",
+   comps:[{n:"Censtar JQD-B30B",d:"Dispensario GNC. 2 mangueras NGV1. Protocolo Modbus RTU ó propietario Censtar → BackOffice."},
+          {n:"E+H CNGmass Coriolis",d:"Medidor másico dentro del dispensario. ±0.5% precisión. -20°C a +55°C. Este es tu Fuente B."},
+          {n:"GasUp BackOffice",d:"PC industrial en gabinete EDS. Lee Censtar, registra transacciones, sincroniza con HeadOffice."}],
+   data:["Kg despachados por manguera (masa real E+H)","Totalizadores acumulados por dispensario","Estado manguera: ocupada/libre/alarma"],
+   proto:"Censtar → RS-485 Modbus RTU → BackOffice → HeadOffice nube"},
+  {id:"2B",name:"SCADA Propio",sub:"Compresión — Tu Check Independiente",color:"var(--orange)",icon:"🔧",
+   desc:"Hardware TUYO. PLC Siemens del compresor + sensores. GasUp no lo ve, no lo toca. Este es tu testigo.",
+   comps:[{n:"Siemens S7-1200 PLC",d:"Controlador del compresor SAFE/STAR. Lee presiones, temperaturas, alarmas, totalizador Nm³."},
+          {n:"Teltonika RUT956",d:"Gateway industrial. 4×Ethernet + Dual-SIM 4G + puerto WAN (Starlink). VPN WireGuard."},
+          {n:"Sensores MRU",d:"Presión succión/descarga, temp por etapa, temp aceite, corriente motor, horas operación."}],
+   data:["Nm³ comprimidos (totalizador — tu Fuente C)","Presiones bancos: alta/media/baja prioridad","Word de alarmas: alta presión, alta temp, fuga, E-stop","Estado compresor: Marcha/Paro/Falla"],
+   proto:"PLC → Ethernet 1m → Teltonika → 4G/Starlink → VPN → snap7/pymodbus → MQTT → PostgreSQL",
+   hub:"Parques: 2× SAFE SW185T14-EM (3,000 Sm³/h), buffer 2,000L (16×125L), ERM Naturgy 14 bar, TEBSA 500KVA",
+   spoke:"Oriente/Pensión: STAR ZXRY-2000-II, generador YDNF-250 Xichai, MAT LUXI 12-tube 9,261 Nm³"},
+  {id:"3",name:"Odoo ERP",sub:"El Sistema Contable",color:"var(--violet)",icon:"📊",
+   desc:"Odoo 17 Community. Contabilidad mexicana, facturación CFDI 4.0, cuentas por cobrar, inventarios, nómina.",
+   comps:[{n:"Contabilidad MX",d:"Plan de cuentas SAT, pólizas automáticas, balanza de comprobación, DyP mensual."},
+          {n:"Facturación CFDI 4.0",d:"Timbrado vía PAC. XML+PDF por WhatsApp al flotillero. Complemento Carta Porte GNC."},
+          {n:"CxC / Prepago",d:"Saldos por cliente/placa. Estados de cuenta automáticos. Alertas de crédito vencido."},
+          {n:"Inventario GNC",d:"Kardex de Nm³: comprados (Naturgy) vs comprimidos vs despachados vs en tránsito (MATs)."}],
+   data:["Asientos contables por transacción (tu Fuente D)","CFDI XML timbrado","Estado de cuenta por flotillero","Conciliación bancaria automática"],
+   proto:"XML-RPC / JSON-RPC → Python xmlrpc.client ó librería OdooRPC"},
+  {id:"4",name:"Agente IA",sub:"El Cerebro",color:"var(--emerald)",icon:"🧠",
+   desc:"Único punto que ve las 4 capas. GasUp, SCADA y Odoo NO se hablan entre sí — el agente orquesta todo.",
+   comps:[{n:"Parser GasUp",d:"Lee CSV/API de ventas. Normaliza 17→20 campos (detecta cambio de esquema 2023). Valida integridad."},
+          {n:"Motor Reconciliación",d:"Cruza 4 fuentes: GasUp (A) ≈ E+H (B) ≈ SCADA (C) = Odoo (D). 7 checks con tolerancias."},
+          {n:"Odoo Client",d:"Crea asientos, genera CFDI, actualiza CxC, ejecuta conciliación bancaria vía XML-RPC."},
+          {n:"MQTT Subscriber",d:"Escucha telemetría SCADA en tiempo real. Trigger alertas por umbral. Bitácora PostgreSQL."},
+          {n:"WhatsApp Bot",d:"Cierre diario al admin. Facturas al flotillero. Alertas SCADA. Consultas de saldo."}],
+   data:["Cierre diario consolidado (4 fuentes)","Alertas operativas en tiempo real","Reportes regulatorios: ASEA, SEMARNAT, CRE","Forecast de demanda → programación MATs"],
+   proto:"Claude API / OpenClaw / MCP — ver pestaña Agente IA"}
+];
+
+const FLUJOS=[
+  {id:"F1",name:"Transacción de Carga",color:"var(--cyan)",steps:["Vagoneta llega a EDS. Operador conecta manguera NGV1 Censtar","BackOffice autoriza despacho → Censtar activa solenoide","E+H CNGmass mide masa real (±0.5%) → Censtar registra litros/kg/$$","BackOffice registra: placa, litros, PVP, medio_pago, timestamp","Sync automático BackOffice → HeadOffice (nube Gasdata)","Agente detecta nueva transacción (API poll ó webhook ó CSV)","Agente crea asiento en Odoo: Débito Caja/Banco, Crédito Ingreso GNC","Si flotillero = crédito → actualiza CxC en Odoo, alerta si excede límite"]},
+  {id:"F2",name:"Cierre Diario + Contabilización",color:"var(--violet)",steps:["23:00 — Agente solicita cierre a GasUp HeadOffice (API/CSV export)","Descarga reporte conciliación: ventas por manguera, medios de pago, totales","Consulta SCADA: Nm³ comprimidos del día (totalizador delta 24h)","Ejecuta reconciliación cuádruple: GasUp vs E+H vs SCADA vs Odoo","Si cuadra → genera póliza de cierre en Odoo, actualiza Kardex inventario","Si NO cuadra → identifica fuente de discrepancia, genera alerta con detalle","Calcula métricas: ingreso/kg, margen operativo, eficiencia compresión, mermas","Genera mensaje cierre WhatsApp → Josue con resumen + anomalías","Archiva en PostgreSQL para histórico y forecast"]},
+  {id:"F3",name:"Conciliación Bancaria",color:"var(--emerald)",steps:["Agente descarga movimientos bancarios (API bancaria ó archivo BAI2/OFX)","Match automático: depósitos vs facturas CFDI por monto ± tolerancia","Si match exacto → marca factura como pagada en Odoo","Si match parcial → pregunta al admin vía WhatsApp","Si sin match → alerta: depósito no identificado ó factura vencida sin pago","Genera reporte de cobranza: pagado/pendiente/vencido por flotillero"]},
+  {id:"F4",name:"Alerta SCADA + Bitácora",color:"var(--orange)",steps:["MQTT recibe lectura PLC cada 30s: presiones, temperaturas, estados","Compara contra umbrales: P_descarga > 260 bar, T_aceite > 85°C, alarma ≠ 0","Si umbral excedido → WhatsApp inmediato a operador + Josue","Registra evento en bitácora SASISOPA (Elemento 7: Registro de incidentes)","Si alarma crítica (E-stop, fuga) → protocolo emergencia PIPC automático","Genera orden de mantenimiento en Odoo si falla recurrente (>3/semana)"]},
+  {id:"F5",name:"Flotillero Consulta + Factura",color:"var(--rose)",steps:["Flotillero manda WhatsApp: '¿Cuánto debo?' ó '¿Cuánto cargó la A03988A?'","Agente identifica placa/cliente → consulta Odoo CxC + GasUp historial","Responde: saldo, últimas 5 cargas, estado de crédito","Si pide factura → CFDI 4.0 en Odoo → timbra vía PAC → XML+PDF por WhatsApp","Si pide estado de cuenta → genera PDF detalle cargas + pagos + saldo"]},
+  {id:"F6",name:"Forecast MAT + Inventario",color:"var(--amber)",steps:["Analiza consumo últimos 7/30/90 días por estación (GasUp + SCADA)","Predice demanda 24-48h por EDS (patrón horario + día semana + estacionalidad)","Calcula Nm³ restantes en MATs de Oriente/Pensión (SCADA presión bancos)","Si MAT < 30% → alerta: 'Programar rotación MAT Oriente mañana 6AM'","Genera orden carga MAT en Parques → actualiza inventario Odoo","Optimiza ruta SITRAK: ¿primero Oriente o Pensión? según urgencia"]},
+  {id:"F7",name:"Rotación MAT Hub→Spoke",color:"var(--sky)",isNew:true,steps:["Agente programa rotación: MAT-001 (lleno, 250 bar) → Oriente","SITRAK C9H sale de Parques. GPS Teltonika trackea posición real-time","Llegada: operador swap MAT vacío ↔ MAT lleno (~45 min)","Agente verifica presión nuevo MAT vía SCADA: confirma 250 bar ó alerta","MAT vacío regresa Parques → poste de carga → compresión inicia","Actualiza inventario Odoo: MAT-001 en Oriente, MAT-002 en compresión","Registra km, GNC consumido SITRAK, tiempo ciclo completo","Complemento Carta Porte CFDI generado automáticamente"]},
+  {id:"F8",name:"Reporte Regulatorio Auto",color:"var(--lime)",isNew:true,steps:["DIARIO: Bitácora SASISOPA Elem. 7 (incidentes) + Elem. 14 (control documental)","MENSUAL: Inventario Nm³ comprados vs despachados, mermas, eficiencia","TRIMESTRAL: Indicadores ASEA seguridad industrial, emisiones fugitivas","ANUAL: Informe CRE (volumen, clientes, estaciones) + COA SEMARNAT","Agente recopila 4 fuentes, llena formatos predefinidos (PROC-SEG, PROC-OPE)","Genera DOCX formato corporativo → repositorio → alerta Josue para revisión","Bitácora Residuos Peligrosos (aceite compresor) + Manifiesto RP"]}
+];
+
+const RSRC=[
+  {id:"A",name:"GasUp POS",color:"var(--cyan)",what:"Ventas registradas en BackOffice",unit:"Litros / $ / kg",fields:"17 campos: fecha, placa, litros, PVP, medio_pago, segmento, recaudo"},
+  {id:"B",name:"E+H Coriolis",color:"var(--sky)",what:"Masa real despachada por manguera",unit:"kg (±0.5%)",fields:"Flujo másico, densidad, temperatura, totalizador"},
+  {id:"C",name:"SCADA PLC",color:"var(--orange)",what:"Nm³ totales comprimidos",unit:"Nm³ (totalizador)",fields:"Presiones bancos, temp etapa, horas compresor, alarmas"},
+  {id:"D",name:"Odoo Contable",color:"var(--violet)",what:"Asientos contables generados",unit:"$ MXN (pólizas)",fields:"Débito Caja/Banco, Crédito Ingreso, CxC, Kardex"}
+];
+const CHECKS=[
+  {pair:"A ≈ B",desc:"Ventas = masa despachada",tol:"±2%",fail:"Manipulación dispensario"},
+  {pair:"A < B",desc:"GasUp registró menos",tol:"Anomalía",fail:"Fraude operador / falla BackOffice"},
+  {pair:"A > B",desc:"GasUp registró más",tol:"Anomalía",fail:"Transacción fantasma / calibración"},
+  {pair:"ΣB ≈ C",desc:"Despachado ≈ Comprimido − stock",tol:"±5%",fail:"Fuga tubería AP"},
+  {pair:"ΣB < C",desc:"Comprimió más de lo despachado",tol:"OK si ΔP subió",fail:"Fuga compresor→dispensario"},
+  {pair:"A = D",desc:"Toda venta tiene asiento",tol:"0%",fail:"Descuadre fiscal"},
+  {pair:"A ≠ D",desc:"Diferencia ventas vs asientos",tol:"Ajuste ya",fail:"Error sync Agente-Odoo"}
+];
+
+const AGENTS=[
+  {name:"Claude API Directo",color:"var(--emerald)",
+   stack:["Python 3.12 + FastAPI","anthropic SDK → claude-sonnet-4-5","pymodbus / snap7 → SCADA","xmlrpc.client → Odoo 17","paho-mqtt → telemetría","PostgreSQL 16 → histórico","Twilio / Meta Cloud API → WhatsApp"],
+   pros:["Control total del código","Costo mínimo: $30-80 USD/mes","Sin dependencia framework joven","System prompt contexto GNC completo"],
+   cons:["WhatsApp bot manual (Twilio)","Sin heartbeat nativo","Sin orquestación multi-agente"],cost:"$50-100 USD/mes total"},
+  {name:"OpenClaw Framework",color:"var(--orange)",
+   stack:["Node.js + OpenClaw runtime","Skills en Python/JS","Built-in: heartbeat, retry, cron","MQTT connector nativo","PostgreSQL + Redis","WhatsApp vía skill connector"],
+   pros:["Heartbeat + auto-recovery","Scheduling nativo (cron)","Multi-agente: 1 por EDS","Corre en Mac Mini local"],
+   cons:["Framework joven (< 1 año)","Menos documentación","Lock-in modelo skills","Comunidad pequeña"],cost:"$30-80 USD/mes (LLM)"},
+  {name:"MCP (Claude Nativo)",color:"var(--amber)",isNew:true,
+   stack:["Claude.ai con MCP connectors","MCP Server GasUp (por desarrollar)","MCP Server Odoo (existe GitHub)","MCP Server SCADA (por desarrollar)","Sin backend — Claude = runtime","WhatsApp vía MCP Gateway"],
+   pros:["Cero infraestructura propia","Claude consulta todo como tool","Ya funciona: CF, Gmail, GCal","Ideal fase exploratoria"],
+   cons:["Requiere API doc de GasUp","Sin scheduling automático","Sin batch offline","Depende de claude.ai uptime"],cost:"$20/mes (Claude Pro)"}
+];
+const SHARED=["Parser GasUp (normaliza CSV/JSON, detecta cambio esquema 2023)","Motor Reconciliación 4 fuentes con tolerancias","Odoo Client XML-RPC (asientos, CFDI, CxC, Kardex)","MQTT Subscriber + PostgreSQL writer","Generador reportes regulatorios (SASISOPA, CRE, SEMARNAT)","Template WhatsApp cierre diario + alertas"];
+
+const CONN=[
+  {name:"Parques (Hub)",p:"Starlink",b1:"Telcel 4G",b2:"AT&T 4G",gw:"Teltonika RUT956",dev:"2× PLC SAFE + 6× Dispensarios + ERM + TEBSA",isHub:true},
+  {name:"Oriente (Spoke)",p:"Starlink",b1:"Telcel 4G",b2:"AT&T 4G",gw:"Teltonika RUT956",dev:"1× PLC STAR + 1× Censtar + Generador"},
+  {name:"Pensión (Spoke)",p:"Starlink",b1:"Telcel 4G",b2:"AT&T 4G",gw:"Teltonika RUT956",dev:"1× PLC STAR + 1× Censtar + Generador"}
+];
+
+// ═══════════════ RENDER ═══════════════
+let curTab=0, curCapa=0, curFlujo=0, curAgent=0;
+
+function showTab(i){
+  curTab=i;
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('on',j===i));
+  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('on',j===i));
+}
+
+function bc(color,text){return `<span class="badge" style="background:${color}22;color:${color};border:1px solid ${color}44">${text}</span>`}
+function st(color,text){return `<h3 class="st" style="color:${color}">${text}</h3>`}
+
+function renderCapas(){
+  const c=CAPAS[curCapa];
+  let nav='';
+  CAPAS.forEach((cap,i)=>{
+    const on=i===curCapa;
+    nav+=`<div class="capas-item" onclick="curCapa=${i};renderCapas()" style="background:${on?cap.color+'15':'transparent'};border:1px solid ${on?cap.color+'55':'var(--border)'};border-left-color:${on?cap.color:'transparent'}">
+      <div style="display:flex;align-items:center;gap:7px"><span style="font-size:16px">${cap.icon}</span><div><div class="id" style="color:${cap.color}">CAPA ${cap.id}</div><div class="nm">${cap.name}</div></div></div>
+      <div class="sb">${cap.sub}</div></div>`;
+  });
+  let comps='';c.comps.forEach(cp=>{comps+=`<div style="margin-bottom:8px"><div style="color:var(--text);font-size:11px;font-weight:700">${cp.n}</div><div style="color:var(--muted);font-size:10px;line-height:1.5">${cp.d}</div></div>`});
+  let dout='';c.data.forEach(d=>{dout+=`<div style="color:var(--muted);font-size:10px;line-height:1.7;padding-left:10px;border-left:2px solid ${c.color}30;margin-bottom:5px">${d}</div>`});
+  let hubSpoke='';
+  if(c.hub){hubSpoke=`<div class="grid2" style="margin-top:0">
+    <div style="background:var(--emerald)08;border:1px solid var(--emerald)30;border-radius:10px;padding:12px">${bc('var(--emerald)','HUB — PARQUES')}<p style="color:var(--text);font-size:10px;line-height:1.6;margin-top:6px">${c.hub}</p></div>
+    <div style="background:var(--amber)08;border:1px solid var(--amber)30;border-radius:10px;padding:12px">${bc('var(--amber)','SPOKE — ORIENTE / PENSIÓN')}<p style="color:var(--text);font-size:10px;line-height:1.6;margin-top:6px">${c.spoke}</p></div></div>`}
+  document.getElementById('p0').innerHTML=`<div class="capas-wrap"><div class="capas-nav">${nav}</div><div class="capas-detail">
+    <div style="background:${c.color}0c;border:1px solid ${c.color}30;border-radius:12px;padding:18px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:26px">${c.icon}</span><div><h2 style="color:${c.color};margin:0;font-size:18px;font-weight:800">Capa ${c.id}: ${c.name}</h2><p style="color:var(--muted);margin:0;font-size:11px">${c.sub}</p></div></div>
+      <p style="color:var(--text);font-size:12px;line-height:1.6;margin:0">${c.desc}</p></div>
+    <div class="grid2"><div class="card">${st(c.color,'Componentes')}${comps}</div>
+      <div class="card">${st(c.color,'Datos de Salida')}${dout}
+        <div style="margin-top:10px;padding:7px 9px;background:${c.color}08;border-radius:6px;border:1px solid ${c.color}20">
+          <div style="color:${c.color};font-size:9px;font-weight:700;margin-bottom:2px">PROTOCOLO</div>
+          <div style="color:var(--text);font-size:10px;font-family:'JetBrains Mono',monospace">${c.proto}</div></div></div></div>
+    ${hubSpoke}</div></div>`;
+}
+
+function renderFlujos(){
+  const f=FLUJOS[curFlujo];
+  let nav='';
+  FLUJOS.forEach((fl,i)=>{
+    const on=i===curFlujo;
+    nav+=`<div class="flujo-item" onclick="curFlujo=${i};renderFlujos()" style="background:${on?fl.color+'15':'transparent'};border:1px solid ${on?fl.color+'50':'var(--border)'}">
+      <span style="color:${fl.color};font-size:10px;font-weight:800;font-family:'JetBrains Mono',monospace;min-width:20px">${fl.id}</span>
+      <span style="color:${on?'var(--text)':'var(--muted)'};font-size:10px;font-weight:${on?600:400}">${fl.name}</span>
+      ${fl.isNew?'<span style="background:var(--lime)30;color:var(--lime);font-size:7px;padding:1px 4px;border-radius:3px;font-weight:700">NEW</span>':''}</div>`;
+  });
+  let steps='';
+  f.steps.forEach((s,i)=>{
+    steps+=`<div style="display:flex;gap:10px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:26px">
+        <div class="step-num" style="background:${f.color}20;border:2px solid ${f.color};color:${f.color}">${i+1}</div>
+        ${i<f.steps.length-1?`<div class="step-line" style="background:${f.color}30"></div>`:''}
+      </div>
+      <div style="flex:1;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:8px 12px;margin-bottom:${i<f.steps.length-1?6:0}px">
+        <span style="color:var(--text);font-size:11px;line-height:1.5">${s}</span></div></div>`;
+  });
+  document.getElementById('p1').innerHTML=`<div class="flujos-wrap"><div class="flujos-nav">${nav}</div><div style="flex:1">
+    <div style="margin-bottom:14px;display:flex;align-items:center;gap:10px">${bc(f.color,f.id)}<h2 style="color:var(--text);margin:0;font-size:16px;font-weight:700">${f.name}</h2>${f.isNew?bc('var(--lime)','NUEVO v3'):''}</div>
+    <div style="display:flex;flex-direction:column">${steps}</div></div></div>`;
+}
+
+function renderReconc(){
+  let srcs='';RSRC.forEach(s=>{srcs+=`<div style="background:${s.color}0a;border:1px solid ${s.color}30;border-radius:10px;padding:12px">
+    <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">
+      <div style="width:26px;height:26px;border-radius:50%;background:${s.color}20;border:2px solid ${s.color};display:flex;align-items:center;justify-content:center;color:${s.color};font-size:11px;font-weight:900;font-family:'JetBrains Mono',monospace">${s.id}</div>
+      <div style="color:${s.color};font-size:12px;font-weight:700">${s.name}</div></div>
+    <div style="color:var(--text);font-size:10px;margin-bottom:4px">${s.what}</div>
+    <div style="color:var(--muted);font-size:9px">${s.unit}</div>
+    <div style="margin-top:6px;padding:5px 7px;background:var(--bg);border-radius:5px;color:var(--dim);font-size:9px;font-family:'JetBrains Mono',monospace;line-height:1.5">${s.fields}</div></div>`});
+  let checks='';CHECKS.forEach(ch=>{checks+=`<div class="check-row card" style="padding:8px 12px">
+    <div style="font-family:'JetBrains Mono',monospace;color:var(--amber);font-size:11px;font-weight:800">${ch.pair}</div>
+    <div style="color:var(--text);font-size:10px">${ch.desc}</div>
+    <div style="color:var(--emerald);font-size:9px;font-family:'JetBrains Mono',monospace">${ch.tol}</div>
+    <div style="color:var(--rose);font-size:9px">${ch.fail}</div></div>`});
+  document.getElementById('p2').innerHTML=`<div style="display:flex;flex-direction:column;gap:14px">
+    <div class="grid4">${srcs}</div>
+    ${st('var(--amber)','7 Validaciones Cruzadas')}
+    <div style="display:flex;flex-direction:column;gap:5px">${checks}</div>
+    <div class="grid2">
+      <div class="vs-box" style="background:var(--rose)08;border:1px solid var(--rose)30">${st('var(--rose)','NatGas (competencia)')}<div class="vs-num" style="color:var(--text)">1 <span style="font-size:13px;color:var(--muted)">fuente</span></div><div style="color:var(--muted);font-size:10px;margin-top:4px">Solo GasUp. 80% manual.</div><div style="color:var(--rose);font-size:10px;margin-top:4px">Si GasUp falla, estás ciego. Sin check independiente.</div></div>
+      <div class="vs-box" style="background:var(--emerald)08;border:1px solid var(--emerald)30">${st('var(--emerald)','Central Gas (nosotros)')}<div class="vs-num" style="color:var(--text)">4 <span style="font-size:13px;color:var(--muted)">fuentes</span></div><div style="color:var(--muted);font-size:10px;margin-top:4px">GasUp + E+H + SCADA + Odoo. 0% manual.</div><div style="color:var(--emerald);font-size:10px;margin-top:4px">4 testigos independientes. Si uno falla, los otros 3 detectan.</div></div>
+    </div></div>`;
+}
+
+function renderAgent(){
+  const a=AGENTS[curAgent];
+  let opts='';AGENTS.forEach((ag,i)=>{
+    const on=i===curAgent;
+    opts+=`<div class="agent-opt" onclick="curAgent=${i};renderAgent()" style="background:${on?ag.color+'15':'var(--card)'};border:1px solid ${on?ag.color+'50':'var(--border)'}">
+      <div style="color:${ag.color};font-size:13px;font-weight:700">${ag.name}</div>${ag.isNew?'<div style="margin-top:4px">'+bc('var(--lime)','NUEVO v3')+'</div>':''}</div>`});
+  let stack='';a.stack.forEach(s=>{stack+=`<div style="color:var(--text);font-size:10px;line-height:1.8;font-family:'JetBrains Mono',monospace;padding-left:8px;border-left:2px solid ${a.color}30">${s}</div>`});
+  let pros='';a.pros.forEach(p=>{pros+=`<div style="color:var(--emerald);font-size:10px;line-height:1.8">+ ${p}</div>`});
+  let cons='';a.cons.forEach(c=>{cons+=`<div style="color:var(--rose);font-size:10px;line-height:1.8">− ${c}</div>`});
+  let shared='';SHARED.forEach(s=>{shared+=`<div style="color:var(--dim);font-size:9px;line-height:1.7;font-family:'JetBrains Mono',monospace">${s}</div>`});
+  document.getElementById('p3').innerHTML=`<div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:6px">${opts}</div>
+    <div class="grid3">
+      <div class="card">${st(a.color,'Stack Tecnológico')}${stack}</div>
+      <div class="card">${st('var(--emerald)','Pros')}${pros}<div style="margin-top:14px">${st('var(--rose)','Cons')}</div>${cons}</div>
+      <div class="card">${st('var(--amber)','Costo Mensual')}<div style="color:var(--text);font-size:20px;font-weight:800;margin-bottom:12px">${a.cost}</div>${st('var(--muted)','Lógica Compartida')}${shared}</div>
+    </div></div>`;
+}
+
+function renderConn(){
+  let stations='';CONN.forEach(st=>{
+    const hc=st.isHub?'var(--emerald)':'var(--amber)';
+    stations+=`<div class="card"><h3 class="st" style="color:${hc}">${st.name}</h3>
+      ${[{l:'1° Primario',v:st.p,c:'var(--emerald)'},{l:'2° Failover',v:st.b1,c:'var(--amber)'},{l:'3° Failover',v:st.b2,c:'var(--rose)'}].map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="color:var(--dim);font-size:9px">${x.l}</span>${bc(x.c,x.v)}</div>`).join('')}
+      <div style="margin-top:8px;padding:6px 8px;background:var(--bg);border-radius:5px"><div style="color:var(--dim);font-size:8px">GATEWAY</div><div style="color:var(--text);font-size:10px;font-family:'JetBrains Mono',monospace">${st.gw}</div></div>
+      <div style="margin-top:5px;color:var(--muted);font-size:9px">${st.dev}</div></div>`});
+  const costs=[
+    {i:"4× Starlink suscripción",v:"$3,600 MXN/mes",h:false},{i:"Fibra casa",v:"$800 MXN/mes",h:false},
+    {i:"6× SIM 4G (2/estación)",v:"$1,800 MXN/mes",h:false},{i:"Total mensual conectividad",v:"$6,200 MXN/mes",h:true},
+    {i:"4× Starlink equipo",v:"$40,000 MXN (once)",h:false},{i:"3× Teltonika RUT956",v:"$45,000 MXN (once)",h:false}
+  ];
+  let costHtml='';costs.forEach(c=>{costHtml+=`<div class="conn-cost" style="background:${c.h?'var(--amber)12':'var(--card)'};border:1px solid ${c.h?'var(--amber)40':'var(--border)'}"><span style="color:${c.h?'var(--amber)':'var(--muted)'};font-size:10px;font-weight:${c.h?700:400}">${c.i}</span><span style="color:${c.h?'var(--amber)':'var(--text)'};font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace">${c.v}</span></div>`});
+  document.getElementById('p4').innerHTML=`<div style="display:flex;flex-direction:column;gap:14px">
+    <div class="grid3">${stations}</div>
+    <div style="background:var(--violet)08;border:1px solid var(--violet)30;border-radius:10px;padding:14px">
+      ${st('var(--violet)','Servidor Central — VPN Mesh')}
+      <div class="grid4">${[{l:'Primario',v:'Fibra óptica'},{l:'Backup',v:'Starlink'},{l:'Hardware',v:'Mac Mini M-series'},{l:'Software',v:'OpenClaw/FastAPI + PG + Mosquitto'}].map(x=>`<div><div style="color:var(--dim);font-size:9px">${x.l}</div><div style="color:var(--text);font-size:11px;font-family:'JetBrains Mono',monospace">${x.v}</div></div>`).join('')}</div>
+      <div style="margin-top:8px;padding:6px 10px;background:var(--bg);border-radius:5px"><span style="color:var(--violet);font-size:9px;font-weight:700">VPN: </span><span style="color:var(--text);font-size:10px;font-family:'JetBrains Mono',monospace">WireGuard mesh — cada nodo IP fija en 10.0.0.x/24</span></div></div>
+    ${st('var(--amber)','Costos Conectividad')}
+    <div class="grid2" style="gap:6px">${costHtml}</div></div>`;
+}
+
+// Init
+renderCapas();renderFlujos();renderReconc();renderAgent();renderConn();
+</script>
+</body>
+</html>
