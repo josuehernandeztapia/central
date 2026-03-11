@@ -67,7 +67,7 @@
 <body>
 <div class="wrap">
   <h1><span class="g">CENTRAL GAS</span><span class="m"> — Arquitectura GNC Aguascalientes</span></h1>
-  <p class="sub">v3 — Hub & Spoke · 3 EDS · 5 Capas · 8 Flujos · Reconciliación Cuádruple · CRE G/24214/DIS/OM/2022</p>
+  <p class="sub">v3 — Hub & Spoke · 3 EDS · 5 Capas · 8 Flujos · Reconciliación Triple · CRE G/24214/DIS/OM/2022</p>
 
   <div class="tabs">
     <button class="tab on" onclick="showTab(0)">5 Capas</button>
@@ -102,7 +102,7 @@ const CAPAS=[
   {id:"2A",name:"GasUp Edge",sub:"Dispensario — Territorio GasUp",color:"var(--sky)",icon:"⛽",
    desc:"Hardware que GasUp controla. Tú NO lo tocas. Censtar + E+H Coriolis integrado.",
    comps:[{n:"Censtar JQD-B30B",d:"Dispensario GNC. 2 mangueras NGV1. Protocolo Modbus RTU ó propietario Censtar → BackOffice."},
-          {n:"E+H CNGmass Coriolis",d:"Medidor másico dentro del dispensario. ±0.5% precisión. -20°C a +55°C. Este es tu Fuente B."},
+          {n:"E+H CNGmass Coriolis",d:"Medidor másico dentro del dispensario. ±0.5% precisión. Alimenta los datos de GasUp — no se lee directo (bus RS485 ocupado por BackOffice)."},
           {n:"GasUp BackOffice",d:"PC industrial en gabinete EDS. Lee Censtar, registra transacciones, sincroniza con HeadOffice."}],
    data:["Kg despachados por manguera (masa real E+H)","Totalizadores acumulados por dispensario","Estado manguera: ocupada/libre/alarma"],
    proto:"Censtar → RS-485 Modbus RTU → BackOffice → HeadOffice nube"},
@@ -126,39 +126,36 @@ const CAPAS=[
   {id:"4",name:"Agente IA",sub:"El Cerebro",color:"var(--emerald)",icon:"🧠",
    desc:"Único punto que ve las 4 capas. GasUp, SCADA y Odoo NO se hablan entre sí — el agente orquesta todo.",
    comps:[{n:"Parser GasUp",d:"Lee CSV/API de ventas. Normaliza 17→20 campos (detecta cambio de esquema 2023). Valida integridad."},
-          {n:"Motor Reconciliación",d:"Cruza 4 fuentes: GasUp (A) ≈ E+H (B) ≈ SCADA (C) = Odoo (D). 7 checks con tolerancias."},
+          {n:"Motor Reconciliación",d:"Cruza 3 fuentes: GasUp (A) vs SCADA compresor (C) vs Odoo (D). 5 checks con tolerancias. Check independiente = Nm³ comprimidos vs litros vendidos."},
           {n:"Odoo Client",d:"Crea asientos, genera CFDI, actualiza CxC, ejecuta conciliación bancaria vía XML-RPC."},
           {n:"MQTT Subscriber",d:"Escucha telemetría SCADA en tiempo real. Trigger alertas por umbral. Bitácora PostgreSQL."},
           {n:"WhatsApp Bot",d:"Cierre diario al admin. Facturas al flotillero. Alertas SCADA. Consultas de saldo."}],
-   data:["Cierre diario consolidado (4 fuentes)","Alertas operativas en tiempo real","Reportes regulatorios: ASEA, SEMARNAT, CRE","Forecast de demanda → programación MATs"],
+   data:["Cierre diario consolidado (3 fuentes: GasUp + SCADA + Odoo)","Alertas operativas en tiempo real","Reportes regulatorios: ASEA, SEMARNAT, CRE","Forecast de demanda → programación MATs"],
    proto:"Claude API / OpenClaw / MCP — ver pestaña Agente IA"}
 ];
 
 const FLUJOS=[
   {id:"F1",name:"Transacción de Carga",color:"var(--cyan)",steps:["Vagoneta llega a EDS. Operador conecta manguera NGV1 Censtar","BackOffice autoriza despacho → Censtar activa solenoide","E+H CNGmass mide masa real (±0.5%) → Censtar registra litros/kg/$$","BackOffice registra: placa, litros, PVP, medio_pago, timestamp","Sync automático BackOffice → HeadOffice (nube Gasdata)","Agente detecta nueva transacción (API poll ó webhook ó CSV)","Agente crea asiento en Odoo: Débito Caja/Banco, Crédito Ingreso GNC","Si flotillero = crédito → actualiza CxC en Odoo, alerta si excede límite"]},
-  {id:"F2",name:"Cierre Diario + Contabilización",color:"var(--violet)",steps:["23:00 — Agente solicita cierre a GasUp HeadOffice (API/CSV export)","Descarga reporte conciliación: ventas por manguera, medios de pago, totales","Consulta SCADA: Nm³ comprimidos del día (totalizador delta 24h)","Ejecuta reconciliación cuádruple: GasUp vs E+H vs SCADA vs Odoo","Si cuadra → genera póliza de cierre en Odoo, actualiza Kardex inventario","Si NO cuadra → identifica fuente de discrepancia, genera alerta con detalle","Calcula métricas: ingreso/kg, margen operativo, eficiencia compresión, mermas","Genera mensaje cierre WhatsApp → Josue con resumen + anomalías","Archiva en PostgreSQL para histórico y forecast"]},
+  {id:"F2",name:"Cierre Diario + Contabilización",color:"var(--violet)",steps:["23:00 — Agente solicita cierre a GasUp HeadOffice (API/CSV export)","Descarga reporte conciliación: ventas por manguera, medios de pago, totales","Consulta SCADA: Nm³ comprimidos del día (totalizador delta 24h)","Ejecuta reconciliación triple: GasUp vs SCADA compresor vs Odoo","Si cuadra → genera póliza de cierre en Odoo, actualiza Kardex inventario","Si NO cuadra → identifica fuente de discrepancia, genera alerta con detalle","Calcula métricas: ingreso/kg, margen operativo, eficiencia compresión, mermas","Genera mensaje cierre WhatsApp → Josue con resumen + anomalías","Archiva en PostgreSQL para histórico y forecast"]},
   {id:"F3",name:"Conciliación Bancaria",color:"var(--emerald)",steps:["Agente descarga movimientos bancarios (API bancaria ó archivo BAI2/OFX)","Match automático: depósitos vs facturas CFDI por monto ± tolerancia","Si match exacto → marca factura como pagada en Odoo","Si match parcial → pregunta al admin vía WhatsApp","Si sin match → alerta: depósito no identificado ó factura vencida sin pago","Genera reporte de cobranza: pagado/pendiente/vencido por flotillero"]},
   {id:"F4",name:"Alerta SCADA + Bitácora",color:"var(--orange)",steps:["MQTT recibe lectura PLC cada 30s: presiones, temperaturas, estados","Compara contra umbrales: P_descarga > 260 bar, T_aceite > 85°C, alarma ≠ 0","Si umbral excedido → WhatsApp inmediato a operador + Josue","Registra evento en bitácora SASISOPA (Elemento 7: Registro de incidentes)","Si alarma crítica (E-stop, fuga) → protocolo emergencia PIPC automático","Genera orden de mantenimiento en Odoo si falla recurrente (>3/semana)"]},
   {id:"F5",name:"Flotillero Consulta + Factura",color:"var(--rose)",steps:["Flotillero manda WhatsApp: '¿Cuánto debo?' ó '¿Cuánto cargó la A03988A?'","Agente identifica placa/cliente → consulta Odoo CxC + GasUp historial","Responde: saldo, últimas 5 cargas, estado de crédito","Si pide factura → CFDI 4.0 en Odoo → timbra vía PAC → XML+PDF por WhatsApp","Si pide estado de cuenta → genera PDF detalle cargas + pagos + saldo"]},
   {id:"F6",name:"Forecast MAT + Inventario",color:"var(--amber)",steps:["Analiza consumo últimos 7/30/90 días por estación (GasUp + SCADA)","Predice demanda 24-48h por EDS (patrón horario + día semana + estacionalidad)","Calcula Nm³ restantes en MATs de Oriente/Pensión (SCADA presión bancos)","Si MAT < 30% → alerta: 'Programar rotación MAT Oriente mañana 6AM'","Genera orden carga MAT en Parques → actualiza inventario Odoo","Optimiza ruta SITRAK: ¿primero Oriente o Pensión? según urgencia"]},
   {id:"F7",name:"Rotación MAT Hub→Spoke",color:"var(--sky)",isNew:true,steps:["Agente programa rotación: MAT-001 (lleno, 250 bar) → Oriente","SITRAK C9H sale de Parques. GPS Teltonika trackea posición real-time","Llegada: operador swap MAT vacío ↔ MAT lleno (~45 min)","Agente verifica presión nuevo MAT vía SCADA: confirma 250 bar ó alerta","MAT vacío regresa Parques → poste de carga → compresión inicia","Actualiza inventario Odoo: MAT-001 en Oriente, MAT-002 en compresión","Registra km, GNC consumido SITRAK, tiempo ciclo completo","Complemento Carta Porte CFDI generado automáticamente"]},
-  {id:"F8",name:"Reporte Regulatorio Auto",color:"var(--lime)",isNew:true,steps:["DIARIO: Bitácora SASISOPA Elem. 7 (incidentes) + Elem. 14 (control documental)","MENSUAL: Inventario Nm³ comprados vs despachados, mermas, eficiencia","TRIMESTRAL: Indicadores ASEA seguridad industrial, emisiones fugitivas","ANUAL: Informe CRE (volumen, clientes, estaciones) + COA SEMARNAT","Agente recopila 4 fuentes, llena formatos predefinidos (PROC-SEG, PROC-OPE)","Genera DOCX formato corporativo → repositorio → alerta Josue para revisión","Bitácora Residuos Peligrosos (aceite compresor) + Manifiesto RP"]}
+  {id:"F8",name:"Reporte Regulatorio Auto",color:"var(--lime)",isNew:true,steps:["DIARIO: Bitácora SASISOPA Elem. 7 (incidentes) + Elem. 14 (control documental)","MENSUAL: Inventario Nm³ comprados vs despachados, mermas, eficiencia","TRIMESTRAL: Indicadores ASEA seguridad industrial, emisiones fugitivas","ANUAL: Informe CRE (volumen, clientes, estaciones) + COA SEMARNAT","Agente recopila 3 fuentes, llena formatos predefinidos (PROC-SEG, PROC-OPE)","Genera DOCX formato corporativo → repositorio → alerta Josue para revisión","Bitácora Residuos Peligrosos (aceite compresor) + Manifiesto RP"]}
 ];
 
 const RSRC=[
-  {id:"A",name:"GasUp POS",color:"var(--cyan)",what:"Ventas registradas en BackOffice",unit:"Litros / $ / kg",fields:"17 campos: fecha, placa, litros, PVP, medio_pago, segmento, recaudo"},
-  {id:"B",name:"E+H Coriolis",color:"var(--sky)",what:"Masa real despachada por manguera",unit:"kg (±0.5%)",fields:"Flujo másico, densidad, temperatura, totalizador"},
-  {id:"C",name:"SCADA PLC",color:"var(--orange)",what:"Nm³ totales comprimidos",unit:"Nm³ (totalizador)",fields:"Presiones bancos, temp etapa, horas compresor, alarmas"},
+  {id:"A",name:"GasUp POS",color:"var(--cyan)",what:"Ventas registradas (medición E+H integrada)",unit:"Litros / $ / kg",fields:"17 campos: fecha, placa, litros, PVP, medio_pago, segmento. E+H ±0.5% alimenta internamente."},
+  {id:"C",name:"SCADA Compresor",color:"var(--orange)",what:"Nm³ totales comprimidos — check independiente",unit:"Nm³ (totalizador PLC)",fields:"11 vars ACKIA (VW1004-VW1072) + 34 alarmas (M15-M1). Smart S7 IP 192.168.1.253:102"},
   {id:"D",name:"Odoo Contable",color:"var(--violet)",what:"Asientos contables generados",unit:"$ MXN (pólizas)",fields:"Débito Caja/Banco, Crédito Ingreso, CxC, Kardex"}
 ];
 const CHECKS=[
-  {pair:"A ≈ B",desc:"Ventas = masa despachada",tol:"±2%",fail:"Manipulación dispensario"},
-  {pair:"A < B",desc:"GasUp registró menos",tol:"Anomalía",fail:"Fraude operador / falla BackOffice"},
-  {pair:"A > B",desc:"GasUp registró más",tol:"Anomalía",fail:"Transacción fantasma / calibración"},
-  {pair:"ΣB ≈ C",desc:"Despachado ≈ Comprimido − stock",tol:"±5%",fail:"Fuga tubería AP"},
-  {pair:"ΣB < C",desc:"Comprimió más de lo despachado",tol:"OK si ΔP subió",fail:"Fuga compresor→dispensario"},
-  {pair:"A = D",desc:"Toda venta tiene asiento",tol:"0%",fail:"Descuadre fiscal"},
-  {pair:"A ≠ D",desc:"Diferencia ventas vs asientos",tol:"Ajuste ya",fail:"Error sync Agente-Odoo"}
+  {pair:"A ≈ C",desc:"Litros vendidos ≈ Nm³ comprimidos (−stock)",tol:"±5%",fail:"Fuga ó transacción fantasma"},
+  {pair:"A > C",desc:"GasUp reporta más de lo comprimido",tol:"Anomalía",fail:"Transacción fantasma ó fuga post-compresor"},
+  {pair:"A < C",desc:"Se comprimió más de lo vendido",tol:"OK si ΔP subió",fail:"Fuga pre-dispensario"},
+  {pair:"A = D",desc:"Toda venta tiene asiento contable",tol:"0%",fail:"Descuadre fiscal / error sync"},
+  {pair:"$D = Banco",desc:"Asientos Odoo = depósitos bancarios",tol:"±$5 MXN",fail:"Pago no identificado / factura sin pago"}
 ];
 
 const AGENTS=[
@@ -175,7 +172,7 @@ const AGENTS=[
    pros:["Cero infraestructura propia","Claude consulta todo como tool","Ya funciona: CF, Gmail, GCal","Ideal fase exploratoria"],
    cons:["Requiere API doc de GasUp","Sin scheduling automático","Sin batch offline","Depende de claude.ai uptime"],cost:"$20/mes (Claude Pro)"}
 ];
-const SHARED=["Parser GasUp (normaliza CSV/JSON, detecta cambio esquema 2023)","Motor Reconciliación 4 fuentes con tolerancias","Odoo Client XML-RPC (asientos, CFDI, CxC, Kardex)","MQTT Subscriber + PostgreSQL writer","Generador reportes regulatorios (SASISOPA, CRE, SEMARNAT)","Template WhatsApp cierre diario + alertas"];
+const SHARED=["Parser GasUp (normaliza CSV/JSON, detecta cambio esquema 2023)","Motor Reconciliación 3 fuentes (A vs C vs D) con tolerancias","Odoo Client XML-RPC (asientos, CFDI, CxC, Kardex)","MQTT Subscriber + PostgreSQL writer","Generador reportes regulatorios (SASISOPA, CRE, SEMARNAT)","Template WhatsApp cierre diario + alertas"];
 
 const CONN=[
   {name:"Parques (Hub)",p:"Starlink",b1:"Telcel 4G",b2:"AT&T 4G",gw:"Teltonika RUT956",dev:"2× PLC SAFE + 6× Dispensarios + ERM + TEBSA",isHub:true},
@@ -261,12 +258,12 @@ function renderReconc(){
     <div style="color:var(--emerald);font-size:9px;font-family:'JetBrains Mono',monospace">${ch.tol}</div>
     <div style="color:var(--rose);font-size:9px">${ch.fail}</div></div>`});
   document.getElementById('p2').innerHTML=`<div style="display:flex;flex-direction:column;gap:14px">
-    <div class="grid4">${srcs}</div>
-    ${st('var(--amber)','7 Validaciones Cruzadas')}
+    <div class="grid3">${srcs}</div>
+    ${st('var(--amber)','5 Validaciones Cruzadas')}
     <div style="display:flex;flex-direction:column;gap:5px">${checks}</div>
     <div class="grid2">
       <div class="vs-box" style="background:var(--rose)08;border:1px solid var(--rose)30">${st('var(--rose)','NatGas (competencia)')}<div class="vs-num" style="color:var(--text)">1 <span style="font-size:13px;color:var(--muted)">fuente</span></div><div style="color:var(--muted);font-size:10px;margin-top:4px">Solo GasUp. 80% manual.</div><div style="color:var(--rose);font-size:10px;margin-top:4px">Si GasUp falla, estás ciego. Sin check independiente.</div></div>
-      <div class="vs-box" style="background:var(--emerald)08;border:1px solid var(--emerald)30">${st('var(--emerald)','Central Gas (nosotros)')}<div class="vs-num" style="color:var(--text)">4 <span style="font-size:13px;color:var(--muted)">fuentes</span></div><div style="color:var(--muted);font-size:10px;margin-top:4px">GasUp + E+H + SCADA + Odoo. 0% manual.</div><div style="color:var(--emerald);font-size:10px;margin-top:4px">4 testigos independientes. Si uno falla, los otros 3 detectan.</div></div>
+      <div class="vs-box" style="background:var(--emerald)08;border:1px solid var(--emerald)30">${st('var(--emerald)','Central Gas (nosotros)')}<div class="vs-num" style="color:var(--text)">3 <span style="font-size:13px;color:var(--muted)">fuentes</span></div><div style="color:var(--muted);font-size:10px;margin-top:4px">GasUp + SCADA compresor + Odoo. 0% manual.</div><div style="color:var(--emerald);font-size:10px;margin-top:4px">3 testigos independientes. Si uno falla, los otros 2 detectan.</div></div>
     </div></div>`;
 }
 
